@@ -5,7 +5,7 @@ import { wifiUsers, wifiSessions, wifiVouchers, portalSettings } from '@/lib/db/
 import { eq, desc, sql, lt, and } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getUnifiClient } from '@/lib/unifi'
-import { getArubaClient, type ArubaRedirectParams } from '@/lib/aruba'
+import { getArubaClient, type ArubaRedirectParams, type ArubaAuthCredentials } from '@/lib/aruba'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
 
@@ -156,7 +156,8 @@ async function authorizeOnController(
   speedDown: number,
   clientIp?: string,
   detectedController?: string | null,
-  arubaParams?: ArubaRedirectParams
+  arubaParams?: ArubaRedirectParams,
+  credentials?: ArubaAuthCredentials
 ): Promise<{ success: boolean; redirectUrl?: string }> {
   const settings = await getPortalSettings()
   
@@ -220,7 +221,7 @@ async function authorizeOnController(
       }
       
       // Fallback to redirect method (uses the AP's switchip domain)
-      const result = await aruba.authorizeGuest(macAddress, minutes, clientIp, arubaParams)
+      const result = await aruba.authorizeGuest(macAddress, minutes, clientIp, arubaParams, credentials)
       return { success: true, redirectUrl: result.redirectUrl }
     } catch (error) {
       console.error('Aruba authorization error:', error)
@@ -520,7 +521,8 @@ export async function checkActiveSession(macAddress: string, detectedController?
       user?.speedLimitDown || 10240,
       undefined,
       detectedController,
-      arubaParams
+      arubaParams,
+      { user: user?.email || macAddress, password: 'wifi' }
     )
     controllerRedirectUrl = authResult.redirectUrl
   }
@@ -585,7 +587,8 @@ export async function loginWifiUser(email: string, password: string, macAddress:
     user.speedLimitDown || 10240,
     undefined,
     detectedController,
-    arubaParams
+    arubaParams,
+    { user: user.email, password: 'wifi' }
   )
 
   if (!authResult.success) {
@@ -674,7 +677,8 @@ export async function loginWithVoucher(code: string, macAddress: string, detecte
     voucher.speedLimitDown || 10240,
     undefined,
     detectedController,
-    arubaParams
+    arubaParams,
+    { user: code, password: 'wifi' }
   )
 
   if (!authResult.success) {
