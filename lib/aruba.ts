@@ -42,56 +42,27 @@ class ArubaController {
     minutes: number,
     clientIp?: string,
     arubaParams?: ArubaRedirectParams,
-    credentials?: ArubaAuthCredentials
+    credentials?: ArubaAuthCredentials,
+    finalRedirect?: string
   ): Promise<{ redirectUrl: string }> {
-    // Aruba Instant On uses an External Captive Portal (ECP).
+    // Aruba Instant On "Guest Portal" External Captive Portal, in
+    // "Confirmação do Portal de Convidados" (Guest Portal Acknowledgement)
+    // mode, does NOT expose a /cgi-bin/login endpoint. Redirecting the client
+    // there is exactly what produces "404 captive portal not find ecp config".
     //
-    // After the splash page authenticates the user, the browser must be sent
-    // to the AP's login endpoint (`/cgi-bin/login`) on the captive-portal host
-    // the AP provided in `switchip` (e.g. "securelogin.arubanetworks.com").
+    // In this mode the splash page must instead return the predefined token
+    // "Aruba.InstantOn.Acknowledge" in its response body; the AP detects the
+    // token and grants internet access.
+    // (Ref: Aruba Instant On 2.8 user guide, p.97.)
     //
-    // IMPORTANT: that endpoint only understands a small, fixed set of fields:
-    //   cmd=authenticate, user, password, url
-    // Sending unexpected fields (mac, duration, essid, ip, apname...) makes the
-    // AP fail to match its ECP profile and answer
-    // "404 captive portal not find ecp config". So we send ONLY the fields the
-    // AP expects.
+    // We therefore send the browser to our own acknowledge endpoint, which
+    // emits that token and then forwards the user to the final destination.
+    const destination = finalRedirect || arubaParams?.url || ''
+    const redirectUrl = destination
+      ? `/api/aruba/acknowledge?redirect=${encodeURIComponent(destination)}`
+      : '/api/aruba/acknowledge'
 
-    // Determine the authentication host. Prefer the switchip host sent by the
-    // AP; fall back to the configured base URL only when it is missing.
-    let authHost = arubaParams?.switchip?.trim()
-
-    let authUrl: URL
-    if (authHost) {
-      // switchip may come as a bare host or already include a scheme/path.
-      if (!/^https?:\/\//i.test(authHost)) {
-        authHost = `https://${authHost}`
-      }
-      const base = new URL(authHost)
-      // Aruba expects the login CGI endpoint on the portal host.
-      if (base.pathname === '/' || base.pathname === '') {
-        base.pathname = '/cgi-bin/login'
-      }
-      authUrl = base
-    } else {
-      // Legacy fallback: use the manually configured controller URL.
-      authUrl = new URL(this.config.baseUrl)
-    }
-
-    // Only the fields the Aruba ECP login endpoint understands.
-    authUrl.searchParams.set('cmd', 'authenticate')
-
-    // user/password are required by the AP. For "Authentication Text" mode the
-    // AP does not validate them, but the fields must still be present.
-    authUrl.searchParams.set('user', credentials?.user || arubaParams?.mac || mac || 'guest')
-    authUrl.searchParams.set('password', credentials?.password || 'guest')
-
-    // Original URL the client tried to reach, so the AP redirects there afterwards.
-    if (arubaParams?.url) authUrl.searchParams.set('url', arubaParams.url)
-
-    return {
-      redirectUrl: authUrl.toString()
-    }
+    return { redirectUrl }
   }
 
   // For Aruba Central with API access

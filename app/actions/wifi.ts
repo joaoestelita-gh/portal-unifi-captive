@@ -220,8 +220,16 @@ async function authorizeOnController(
         }
       }
       
-      // Fallback to redirect method (uses the AP's switchip domain)
-      const result = await aruba.authorizeGuest(macAddress, minutes, clientIp, arubaParams, credentials)
+      // Aruba Instant On confirmation mode: the acknowledge endpoint emits the
+      // "Aruba.InstantOn.Acknowledge" token and forwards the user afterwards.
+      const result = await aruba.authorizeGuest(
+        macAddress,
+        minutes,
+        clientIp,
+        arubaParams,
+        credentials,
+        settings.successRedirectUrl || undefined
+      )
       return { success: true, redirectUrl: result.redirectUrl }
     } catch (error) {
       console.error('Aruba authorization error:', error)
