@@ -6,6 +6,20 @@ interface ArubaConfig {
   clientSecret?: string
 }
 
+// Parameters sent by the Aruba Instant On AP in the captive-portal redirect.
+// `switchip` is the captive-portal domain we MUST authenticate against
+// (e.g. "securelogin.arubanetworks.com").
+interface ArubaRedirectParams {
+  mac?: string
+  ip?: string
+  essid?: string
+  apname?: string
+  apmac?: string
+  vcname?: string
+  switchip?: string
+  url?: string
+}
+
 class ArubaController {
   private config: ArubaConfig
 
@@ -21,33 +35,52 @@ class ArubaController {
     mac: string,
     minutes: number,
     clientIp?: string,
-    redirectUrl?: string
+    arubaParams?: ArubaRedirectParams
   ): Promise<{ redirectUrl: string }> {
-    // Aruba Instant On expects a redirect back to the gateway
-    // with authentication success parameters
-    
-    // Format MAC address
-    const formattedMac = mac.toLowerCase().replace(/[:-]/g, '')
-    
-    // Build the redirect URL for Aruba gateway
-    // The format depends on the Aruba version but typically:
-    // http://gateway_ip/cgi-bin/login?cmd=authenticate&user=guest&mac=XX
-    
-    const baseGatewayUrl = this.config.baseUrl
-    const authUrl = new URL(baseGatewayUrl)
-    
-    // Add authentication success parameters
+    // Aruba Instant On uses an External Captive Portal (ECP).
+    // After the splash page authenticates the user, the browser MUST be sent
+    // back to the captive-portal domain the AP provided in the `switchip`
+    // parameter (e.g. "securelogin.arubanetworks.com"). Redirecting to the
+    // admin-configured controller URL makes the AP answer
+    // "404 captive portal not find ecp config", so `switchip` takes priority.
+
+    const formattedMac = (arubaParams?.mac || mac || '').toLowerCase()
+
+    // Determine the authentication host. Prefer the switchip domain sent by
+    // the AP; fall back to the configured base URL only when it is missing.
+    let authHost = arubaParams?.switchip?.trim()
+
+    let authUrl: URL
+    if (authHost) {
+      // switchip may come as a bare host or already include a scheme/path.
+      if (!/^https?:\/\//i.test(authHost)) {
+        authHost = `https://${authHost}`
+      }
+      const base = new URL(authHost)
+      // Aruba Instant On expects the login CGI endpoint on the portal domain.
+      if (base.pathname === '/' || base.pathname === '') {
+        base.pathname = '/cgi-bin/login'
+      }
+      authUrl = base
+    } else {
+      // Legacy fallback: use the manually configured controller URL.
+      authUrl = new URL(this.config.baseUrl)
+    }
+
+    // Authentication parameters expected by the Aruba ECP login endpoint.
     authUrl.searchParams.set('cmd', 'authenticate')
     authUrl.searchParams.set('mac', formattedMac)
     authUrl.searchParams.set('duration', String(minutes))
-    
-    if (clientIp) {
-      authUrl.searchParams.set('ip', clientIp)
-    }
-    
-    if (redirectUrl) {
-      authUrl.searchParams.set('url', redirectUrl)
-    }
+
+    const ip = arubaParams?.ip || clientIp
+    if (ip) authUrl.searchParams.set('ip', ip)
+    if (arubaParams?.essid) authUrl.searchParams.set('essid', arubaParams.essid)
+    if (arubaParams?.apname) authUrl.searchParams.set('apname', arubaParams.apname)
+    if (arubaParams?.apmac) authUrl.searchParams.set('apmac', arubaParams.apmac)
+    if (arubaParams?.vcname) authUrl.searchParams.set('vcname', arubaParams.vcname)
+
+    // Original URL the client tried to reach, so the AP redirects there afterwards.
+    if (arubaParams?.url) authUrl.searchParams.set('url', arubaParams.url)
 
     return {
       redirectUrl: authUrl.toString()
@@ -192,4 +225,4 @@ export function getArubaClient(options: ArubaConfig): ArubaController {
   return new ArubaController(options)
 }
 
-export type { ArubaConfig }
+export type { ArubaConfig, ArubaRedirectParams }

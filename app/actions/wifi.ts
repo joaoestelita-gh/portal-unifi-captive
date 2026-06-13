@@ -5,7 +5,7 @@ import { wifiUsers, wifiSessions, wifiVouchers, portalSettings } from '@/lib/db/
 import { eq, desc, sql, lt, and } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getUnifiClient } from '@/lib/unifi'
-import { getArubaClient } from '@/lib/aruba'
+import { getArubaClient, type ArubaRedirectParams } from '@/lib/aruba'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
 
@@ -155,7 +155,8 @@ async function authorizeOnController(
   speedUp: number,
   speedDown: number,
   clientIp?: string,
-  detectedController?: string | null
+  detectedController?: string | null,
+  arubaParams?: ArubaRedirectParams
 ): Promise<{ success: boolean; redirectUrl?: string }> {
   const settings = await getPortalSettings()
   
@@ -218,8 +219,8 @@ async function authorizeOnController(
         }
       }
       
-      // Fallback to redirect method
-      const result = await aruba.authorizeGuest(macAddress, minutes, clientIp)
+      // Fallback to redirect method (uses the AP's switchip domain)
+      const result = await aruba.authorizeGuest(macAddress, minutes, clientIp, arubaParams)
       return { success: true, redirectUrl: result.redirectUrl }
     } catch (error) {
       console.error('Aruba authorization error:', error)
@@ -466,7 +467,7 @@ export async function registerWifiUser(data: {
 }
 
 // Check if MAC has active session and auto-reconnect
-export async function checkActiveSession(macAddress: string, detectedController?: string | null) {
+export async function checkActiveSession(macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
   if (!macAddress) {
     return { hasActiveSession: false }
   }
@@ -510,27 +511,32 @@ export async function checkActiveSession(macAddress: string, detectedController?
     ? Math.ceil((new Date(session.expectedEndTime).getTime() - Date.now()) / 60000)
     : 60
 
+  let controllerRedirectUrl: string | undefined
   if (remainingMinutes > 0) {
-    await authorizeOnController(
+    const authResult = await authorizeOnController(
       macAddress,
       remainingMinutes,
       user?.speedLimitUp || 5120,
       user?.speedLimitDown || 10240,
       undefined,
-      detectedController
+      detectedController,
+      arubaParams
     )
+    controllerRedirectUrl = authResult.redirectUrl
   }
 
   return { 
     hasActiveSession: true, 
     userName: user?.name || 'Visitante',
     remainingMinutes,
-    redirectUrl: settings.successRedirectUrl || 'https://google.com'
+    // For Aruba, redirect back to the AP (switchip) to re-grant access;
+    // otherwise use the configured success URL.
+    redirectUrl: controllerRedirectUrl || settings.successRedirectUrl || 'https://google.com'
   }
 }
 
 // WiFi User Login
-export async function loginWifiUser(email: string, password: string, macAddress: string, detectedController?: string | null) {
+export async function loginWifiUser(email: string, password: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
   const users = await db.select().from(wifiUsers).where(eq(wifiUsers.email, email))
   
   if (users.length === 0) {
@@ -578,7 +584,8 @@ export async function loginWifiUser(email: string, password: string, macAddress:
     user.speedLimitUp || 5120,
     user.speedLimitDown || 10240,
     undefined,
-    detectedController
+    detectedController,
+    arubaParams
   )
 
   if (!authResult.success) {
@@ -642,7 +649,7 @@ export async function loginWifiUser(email: string, password: string, macAddress:
 }
 
 // Voucher Login
-export async function loginWithVoucher(code: string, macAddress: string, detectedController?: string | null) {
+export async function loginWithVoucher(code: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
   const vouchers = await db.select().from(wifiVouchers).where(eq(wifiVouchers.code, code.toUpperCase()))
   
   if (vouchers.length === 0) {
@@ -666,7 +673,8 @@ export async function loginWithVoucher(code: string, macAddress: string, detecte
     voucher.speedLimitUp || 5120,
     voucher.speedLimitDown || 10240,
     undefined,
-    detectedController
+    detectedController,
+    arubaParams
   )
 
   if (!authResult.success) {

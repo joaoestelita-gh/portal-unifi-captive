@@ -135,6 +135,7 @@ https://portal.centerent.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname
 | Portal não abre / tela em branco | Domínio fora do Walled Garden | Adicionar o domínio do portal no Walled Garden |
 | Erro de certificado | HTTPS não configurado | Confirmar SSL ativo no domínio da Vercel |
 | Redireciona mas não loga | URL do servidor incorreta | Conferir a URL no campo "URL do Servidor" |
+| "404 captive portal not find ecp config" após login | Redirect de volta apontava para a URL configurada manualmente em vez do `switchip` enviado pelo AP | Corrigido: o sistema agora autentica de volta no domínio `switchip` (ex: securelogin.arubanetworks.com). Garanta que o AP envia o parâmetro `switchip` no redirect |
 | Log não aparece no admin | AP não está redirecionando | Confirmar tipo "Portal Captivo Externo" na rede Guest |
 
 ---
