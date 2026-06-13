@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   Users, 
@@ -154,7 +154,32 @@ export function AdminDashboard({
   settings,
   adminName 
 }: AdminDashboardProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Auto-refresh state
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true)
+    router.refresh()
+    setLastUpdated(new Date())
+    // Visual feedback for the spinner; server data arrives shortly after
+    setTimeout(() => setIsRefreshing(false), 600)
+  }, [router])
+
+  // Periodically refresh the server data so the dashboard shows current info
+  useEffect(() => {
+    if (!autoRefresh) return
+    const interval = setInterval(() => {
+      router.refresh()
+      setLastUpdated(new Date())
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [autoRefresh, router])
+
   const [voucherQuantity, setVoucherQuantity] = useState('5')
   const [voucherDuration, setVoucherDuration] = useState('60')
   const [generatedCodes, setGeneratedCodes] = useState<string[]>([])
@@ -616,6 +641,39 @@ const result = await updateWifiUser(editingUser.id, {
 
       {/* Main Content */}
       <main className="flex-1 ml-64 p-8">
+        {/* Header / Refresh bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground tracking-tight">Painel de Controle</h2>
+            <p className="text-sm text-muted-foreground">
+              {'Atualizado as '}
+              {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="auto-refresh"
+                checked={autoRefresh}
+                onCheckedChange={setAutoRefresh}
+              />
+              <Label htmlFor="auto-refresh" className="text-sm text-muted-foreground cursor-pointer">
+                Atualizacao automatica
+              </Label>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2 bg-transparent"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
