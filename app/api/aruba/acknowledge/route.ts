@@ -7,44 +7,65 @@ export const dynamic = 'force-dynamic'
 // does NOT use a /cgi-bin/login endpoint. Redirecting there returns
 // "404 captive portal not find ecp config".
 //
-// Instead, the splash page must return the predefined token below in the
-// response body. The AP inspects the response, detects the token and grants
-// the client internet access.
+// To grant access, the AP watches for an HTTP response whose body is the
+// predefined token below. Per the HPE Instant On community, the AP expects
+// this token as the response to a POST, and the body must contain ONLY the
+// token (no extra HTML). Once the AP sees it, the client is granted internet
+// access.
 // Ref: Aruba Instant On 2.8 user guide (p.97) and HPE Instant On community.
 const ACK_TOKEN = 'Aruba.InstantOn.Acknowledge'
 
-function escapeAttr(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+// POST: the AP-facing acknowledgement. Body is ONLY the token, as text/plain,
+// so the access point reliably detects it and opens the gate.
+export async function POST() {
+  return new Response(ACK_TOKEN, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
+  })
 }
 
+// GET: the user-facing page. It triggers the acknowledgement POST (which the
+// AP detects to grant access) and only then forwards the user to the final
+// destination. The visible page stays clean (no raw token text).
 export async function GET(req: NextRequest) {
   const redirectParam = req.nextUrl.searchParams.get('redirect') || ''
   const safeRedirect = /^https?:\/\//i.test(redirectParam)
     ? redirectParam
     : 'https://www.google.com'
 
-  // The token is emitted first (and again inside the body) to maximize the
-  // chance the AP detects it. A short delay before the final redirect gives
-  // the AP time to process the acknowledgement before the user leaves.
-  const body = `${ACK_TOKEN}
-<!DOCTYPE html>
+  const body = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta http-equiv="refresh" content="3;url=${escapeAttr(safeRedirect)}" />
 <title>Conectando...</title>
 </head>
 <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 48px 24px; color: #0f172a;">
-<!-- ${ACK_TOKEN} -->
 <p style="font-size: 18px; font-weight: 600;">Conectado!</p>
 <p style="color: #64748b;">Redirecionando, aguarde...</p>
 <script>
-  setTimeout(function () { window.location.href = ${JSON.stringify(safeRedirect)}; }, 3000);
+  (function () {
+    var destination = ${JSON.stringify(safeRedirect)};
+    function go() { window.location.href = destination; }
+    // Send the acknowledgement POST so the AP grants internet access, then
+    // forward the user. Redirect happens regardless so the user is never stuck.
+    try {
+      fetch('/api/aruba/acknowledge', {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'Accept': 'text/plain' },
+      }).then(function () {
+        setTimeout(go, 1500);
+      }).catch(function () {
+        setTimeout(go, 2500);
+      });
+    } catch (e) {
+      setTimeout(go, 2500);
+    }
+  })();
 </script>
 </body>
 </html>`
