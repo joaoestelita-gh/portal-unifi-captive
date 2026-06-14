@@ -36,7 +36,11 @@ export async function POST() {
 // (visible in the body) so the AP detects it immediately and grants access.
 // No redirect and no connectivity polling — the captive browser closes itself.
 export async function GET(_req: NextRequest) {
-  const body = `<!DOCTYPE html>
+  // The token is the VERY FIRST content of the response body so that AP
+  // firmware that only scans the first bytes still detects it. Everything
+  // after it is just the friendly message shown to the user.
+  const body = `${ACK_TOKEN}
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
@@ -44,12 +48,10 @@ export async function GET(_req: NextRequest) {
 <title>Conectado</title>
 </head>
 <body style="margin:0;font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 56px 24px; color: #0f172a; background:#f8fafc;">
-<!-- Token required by the Aruba Instant On AP to grant access. It MUST be present in the response body. -->
-${ACK_TOKEN}
 <div style="max-width:420px;margin:32px auto 0;">
   <div style="font-size: 48px; line-height:1; margin-bottom: 16px;">&#10003;</div>
   <p style="font-size: 22px; font-weight: 700; margin: 0 0 8px;">Conectado!</p>
-  <p style="color: #64748b; margin: 0;">Seu acesso a internet foi liberado. Ja pode fechar esta janela e navegar normalmente.</p>
+  <p style="color: #64748b; margin: 0;">Seu acesso a internet foi liberado. Aguarde alguns segundos: esta janela fecha sozinha e voce ja pode navegar normalmente.</p>
 </div>
 </body>
 </html>`
