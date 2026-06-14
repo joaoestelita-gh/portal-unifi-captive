@@ -12,6 +12,7 @@ RADIUS, eliminando o erro `404 captive portal not find ecp config`.
 ## Sumário
 
 1. [Como funciona (visão geral)](#1-como-funciona-visão-geral)
+1a. [Usando UniFi e Aruba no mesmo sistema](#1a-usando-unifi-e-aruba-no-mesmo-sistema)
 2. [Pré-requisitos](#2-pré-requisitos)
 3. [Segredos que você vai usar](#3-segredos-que-você-vai-usar)
 4. [Passo 1 — Instalar o FreeRADIUS](#passo-1--instalar-o-freeradius)
@@ -43,6 +44,38 @@ RADIUS, eliminando o erro `404 captive portal not find ecp config`.
 > **Por que precisa de uma VPS?** O RADIUS usa UDP (portas 1812/1813), que
 > funções serverless (Vercel) não conseguem escutar. Por isso o FreeRADIUS roda
 > na sua VPS e conversa com o app por HTTPS.
+
+---
+
+## 1a. Usando UniFi e Aruba no mesmo sistema
+
+O portal suporta **UniFi e Aruba Instant On ao mesmo tempo**. No painel de
+administração, em **Configuração da Controladora**, selecione o tipo **"Ambas"**
+e preencha os dados de cada uma.
+
+Cada tecnologia usa um mecanismo **diferente** de autorização, e o sistema
+roteia automaticamente cada cliente para o caminho correto (detectando de qual
+controladora veio o redirect):
+
+| | UniFi | Aruba Instant On |
+|---|---|---|
+| Como o cliente é autorizado | **API direta** da controladora | **Servidor RADIUS** externo |
+| Credenciais usadas | URL + usuário + senha do UniFi | Token de uso único validado via RADIUS |
+| Precisa do FreeRADIUS? | **Não** | **Sim** |
+| O que configurar | Dados do UniFi no painel admin | Este manual + RADIUS no AP |
+
+> **Importante:** o FreeRADIUS deste manual é consultado **apenas pelos APs
+> Aruba**. O UniFi nunca toca no RADIUS — ele é autorizado direto pela API da
+> controladora. Ou seja, mesmo usando "Ambas", você só precisa instalar o
+> FreeRADIUS por causa do Aruba. Se você usa **somente UniFi**, pode ignorar
+> este manual por completo.
+
+**Checklist para o modo "Ambas":**
+
+1. No painel admin: tipo de controladora = **Ambas**.
+2. Preencher URL, usuário e senha da controladora **UniFi**.
+3. Preencher os dados do **Aruba** e apontar o RADIUS para a VPS (este manual).
+4. Instalar e configurar o FreeRADIUS na VPS (passos abaixo).
 
 ---
 
