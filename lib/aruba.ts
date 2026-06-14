@@ -45,24 +45,45 @@ class ArubaController {
     credentials?: ArubaAuthCredentials,
     finalRedirect?: string
   ): Promise<{ redirectUrl: string }> {
-    // Aruba Instant On "Guest Portal" External Captive Portal, in
-    // "Confirmação do Portal de Convidados" (Guest Portal Acknowledgement)
-    // mode, does NOT expose a /cgi-bin/login endpoint. Redirecting the client
-    // there is exactly what produces "404 captive portal not find ecp config".
+    // RADIUS mode ("Autenticação de Convidado (padrão)" no Instant On).
     //
-    // In this mode the splash page must instead return the predefined token
-    // "Aruba.InstantOn.Acknowledge" in its response body; the AP detects the
-    // token and grants internet access.
-    // (Ref: Aruba Instant On 2.8 user guide, p.97.)
-    //
-    // We therefore send the browser to our own acknowledge endpoint, which
-    // emits that token and then forwards the user to the final destination.
-    const destination = finalRedirect || arubaParams?.url || ''
-    const redirectUrl = destination
-      ? `/api/aruba/acknowledge?redirect=${encodeURIComponent(destination)}`
-      : '/api/aruba/acknowledge'
+    // After our portal validates the user/voucher, the browser must be sent to
+    // the AP login endpoint (`/cgi-bin/login`) on the captive-portal host the
+    // AP provided in `switchip` (e.g. "securelogin.arubanetworks.com"). The AP
+    // then submits `user`/`password` to the configured RADIUS server. We pass a
+    // single-use RADIUS token as both user and password so the real credentials
+    // are never exposed in the URL. FreeRADIUS validates that token against our
+    // REST endpoint and grants access — eliminating the "ecp config" 404.
 
-    return { redirectUrl }
+    // Determine the login host. Prefer the switchip host sent by the AP; fall
+    // back to the manually configured controller URL only when missing.
+    let authHost = arubaParams?.switchip?.trim()
+    let authUrl: URL
+    if (authHost) {
+      if (!/^https?:\/\//i.test(authHost)) {
+        authHost = `https://${authHost}`
+      }
+      const base = new URL(authHost)
+      if (base.pathname === '/' || base.pathname === '') {
+        base.pathname = '/cgi-bin/login'
+      }
+      authUrl = base
+    } else {
+      authUrl = new URL(this.config.baseUrl)
+    }
+
+    // Only the fields the Aruba ECP login endpoint understands.
+    authUrl.searchParams.set('cmd', 'login')
+    // The single-use RADIUS token doubles as user and password.
+    const token = credentials?.password || credentials?.user || mac
+    authUrl.searchParams.set('user', token)
+    authUrl.searchParams.set('password', token)
+
+    // Where the AP should send the client after RADIUS grants access.
+    const destination = finalRedirect || arubaParams?.url
+    if (destination) authUrl.searchParams.set('url', destination)
+
+    return { redirectUrl: authUrl.toString() }
   }
 
   // For Aruba Central with API access

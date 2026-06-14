@@ -6,6 +6,7 @@ import { eq, desc, sql, lt, and } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getUnifiClient } from '@/lib/unifi'
 import { getArubaClient, type ArubaRedirectParams, type ArubaAuthCredentials } from '@/lib/aruba'
+import { createRadiusToken } from '@/lib/radius'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
 
@@ -522,6 +523,15 @@ export async function checkActiveSession(macAddress: string, detectedController?
 
   let controllerRedirectUrl: string | undefined
   if (remainingMinutes > 0) {
+    // Issue a single-use RADIUS token validated by FreeRADIUS through our REST endpoint.
+    const radiusToken = await createRadiusToken({
+      macAddress,
+      wifiUserId: user?.id,
+      sessionMinutes: remainingMinutes,
+      speedLimitUp: user?.speedLimitUp || 5120,
+      speedLimitDown: user?.speedLimitDown || 10240,
+    })
+
     const authResult = await authorizeOnController(
       macAddress,
       remainingMinutes,
@@ -530,7 +540,7 @@ export async function checkActiveSession(macAddress: string, detectedController?
       undefined,
       detectedController,
       arubaParams,
-      { user: user?.email || macAddress, password: 'wifi' }
+      { user: radiusToken, password: radiusToken }
     )
     controllerRedirectUrl = authResult.redirectUrl
   }
@@ -587,7 +597,16 @@ export async function loginWifiUser(email: string, password: string, macAddress:
 
   // Authorize on controller
   const sessionMinutes = Math.min(user.sessionLimitMinutes || 120, remainingDaily)
-  
+
+  // Issue a single-use RADIUS token validated by FreeRADIUS through our REST endpoint.
+  const radiusToken = await createRadiusToken({
+    macAddress,
+    wifiUserId: user.id,
+    sessionMinutes,
+    speedLimitUp: user.speedLimitUp || 5120,
+    speedLimitDown: user.speedLimitDown || 10240,
+  })
+
   const authResult = await authorizeOnController(
     macAddress,
     sessionMinutes,
@@ -596,7 +615,7 @@ export async function loginWifiUser(email: string, password: string, macAddress:
     undefined,
     detectedController,
     arubaParams,
-    { user: user.email, password: 'wifi' }
+    { user: radiusToken, password: radiusToken }
   )
 
   if (!authResult.success) {
@@ -677,6 +696,15 @@ export async function loginWithVoucher(code: string, macAddress: string, detecte
     return { success: false, error: 'Codigo ja utilizado o maximo de vezes' }
   }
 
+  // Issue a single-use RADIUS token validated by FreeRADIUS through our REST endpoint.
+  const radiusToken = await createRadiusToken({
+    macAddress,
+    voucherId: voucher.id,
+    sessionMinutes: voucher.durationMinutes,
+    speedLimitUp: voucher.speedLimitUp || 5120,
+    speedLimitDown: voucher.speedLimitDown || 10240,
+  })
+
   // Authorize on controller
   const authResult = await authorizeOnController(
     macAddress,
@@ -686,7 +714,7 @@ export async function loginWithVoucher(code: string, macAddress: string, detecte
     undefined,
     detectedController,
     arubaParams,
-    { user: code, password: 'wifi' }
+    { user: radiusToken, password: radiusToken }
   )
 
   if (!authResult.success) {
