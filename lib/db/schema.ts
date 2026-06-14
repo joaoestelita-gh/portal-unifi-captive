@@ -99,6 +99,26 @@ export const wifiVouchers = pgTable('wifi_vouchers', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 
+// Short-lived tokens used to authenticate guests via RADIUS.
+// When a user/voucher is validated by our portal, we issue a random token and
+// send it as user/password in the redirect to the AP. The AP forwards it to
+// FreeRADIUS, which validates the token against this table through our REST
+// endpoint. This avoids exposing real passwords in the redirect URL.
+export const radiusTokens = pgTable('radius_tokens', {
+  id: text('id').primaryKey(),
+  token: text('token').notNull().unique(),
+  macAddress: text('macAddress'),
+  wifiUserId: text('wifiUserId'),
+  voucherId: text('voucherId'),
+  sessionMinutes: integer('sessionMinutes').notNull().default(120),
+  speedLimitDown: integer('speedLimitDown'),
+  speedLimitUp: integer('speedLimitUp'),
+  used: boolean('used').notNull().default(false),
+  usedAt: timestamp('usedAt'),
+  expiresAt: timestamp('expiresAt').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+
 export const portalSettings = pgTable('portal_settings', {
   id: text('id').primaryKey().default('default'),
   portalTitle: text('portalTitle').default('WiFi Gratuito'),
