@@ -36,22 +36,6 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
   // Detect controller type from the redirect parameters
   const controller = params.cmd ? 'aruba' : params.ap ? 'unifi' : 'direct'
 
-  // Aruba Instant On ECP params. `switchip` is the captive-portal domain the
-  // AP wants us to authenticate against after login (e.g. securelogin.arubanetworks.com).
-  const arubaParams =
-    controller === 'aruba'
-      ? {
-          mac: params.mac,
-          ip: params.ip,
-          essid: params.essid,
-          apname: params.apname,
-          apmac: params.apmac,
-          vcname: params.vcname,
-          switchip: params.switchip,
-          url: params.url,
-        }
-      : undefined
-
   // Log portal access for debugging (only if there are params)
   if (Object.values(params).some((v) => v)) {
     addPortalLog({
@@ -73,8 +57,7 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
   if (macAddress && params.force !== '1') {
     const sessionCheck = await checkActiveSession(
       macAddress,
-      controller !== 'direct' ? controller : null,
-      arubaParams
+      controller !== 'direct' ? controller : null
     )
 
     if (sessionCheck.hasActiveSession) {
@@ -97,7 +80,6 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
       redirectUrl={redirectUrl}
       ssid={ssid}
       detectedController={controller !== 'direct' ? controller : null}
-      arubaParams={arubaParams}
     />
   )
 }

@@ -6,26 +6,6 @@ interface ArubaConfig {
   clientSecret?: string
 }
 
-// Parameters sent by the Aruba Instant On AP in the captive-portal redirect.
-// `switchip` is the captive-portal domain we MUST authenticate against
-// (e.g. "securelogin.arubanetworks.com").
-interface ArubaRedirectParams {
-  mac?: string
-  ip?: string
-  essid?: string
-  apname?: string
-  apmac?: string
-  vcname?: string
-  switchip?: string
-  url?: string
-}
-
-// Credentials the Aruba ECP login endpoint expects on the authentication POST.
-interface ArubaAuthCredentials {
-  user?: string
-  password?: string
-}
-
 class ArubaController {
   private config: ArubaConfig
 
@@ -41,28 +21,37 @@ class ArubaController {
     mac: string,
     minutes: number,
     clientIp?: string,
-    arubaParams?: ArubaRedirectParams,
-    credentials?: ArubaAuthCredentials,
-    finalRedirect?: string
+    redirectUrl?: string
   ): Promise<{ redirectUrl: string }> {
-    // Aruba Instant On "Guest Portal" External Captive Portal, in
-    // "Confirmação do Portal de Convidados" (Guest Portal Acknowledgement)
-    // mode, does NOT expose a /cgi-bin/login endpoint. Redirecting the client
-    // there is exactly what produces "404 captive portal not find ecp config".
-    //
-    // In this mode the splash page must instead return the predefined token
-    // "Aruba.InstantOn.Acknowledge" in its response body; the AP detects the
-    // token and grants internet access.
-    // (Ref: Aruba Instant On 2.8 user guide, p.97.)
-    //
-    // We therefore send the browser to our own acknowledge endpoint, which
-    // emits that token and then forwards the user to the final destination.
-    const destination = finalRedirect || arubaParams?.url || ''
-    const redirectUrl = destination
-      ? `/api/aruba/acknowledge?redirect=${encodeURIComponent(destination)}`
-      : '/api/aruba/acknowledge'
+    // Aruba Instant On expects a redirect back to the gateway
+    // with authentication success parameters
+    
+    // Format MAC address
+    const formattedMac = mac.toLowerCase().replace(/[:-]/g, '')
+    
+    // Build the redirect URL for Aruba gateway
+    // The format depends on the Aruba version but typically:
+    // http://gateway_ip/cgi-bin/login?cmd=authenticate&user=guest&mac=XX
+    
+    const baseGatewayUrl = this.config.baseUrl
+    const authUrl = new URL(baseGatewayUrl)
+    
+    // Add authentication success parameters
+    authUrl.searchParams.set('cmd', 'authenticate')
+    authUrl.searchParams.set('mac', formattedMac)
+    authUrl.searchParams.set('duration', String(minutes))
+    
+    if (clientIp) {
+      authUrl.searchParams.set('ip', clientIp)
+    }
+    
+    if (redirectUrl) {
+      authUrl.searchParams.set('url', redirectUrl)
+    }
 
-    return { redirectUrl }
+    return {
+      redirectUrl: authUrl.toString()
+    }
   }
 
   // For Aruba Central with API access
@@ -203,4 +192,4 @@ export function getArubaClient(options: ArubaConfig): ArubaController {
   return new ArubaController(options)
 }
 
-export type { ArubaConfig, ArubaRedirectParams, ArubaAuthCredentials }
+export type { ArubaConfig }

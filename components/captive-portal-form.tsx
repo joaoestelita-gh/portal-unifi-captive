@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { registerWifiUser, loginWifiUser, loginWithVoucher } from '@/app/actions/wifi'
-import type { ArubaRedirectParams } from '@/lib/aruba'
 
 interface PortalSettings {
   portalTitle: string | null
@@ -26,10 +25,9 @@ interface CaptivePortalFormProps {
   apMac?: string
   ssid?: string
   detectedController?: string | null
-  arubaParams?: ArubaRedirectParams
 }
 
-export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https://google.com', ssid, detectedController, arubaParams }: CaptivePortalFormProps) {
+export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https://google.com', ssid, detectedController }: CaptivePortalFormProps) {
   const [activeTab, setActiveTab] = useState('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +52,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
     setLoading(true)
     setError(null)
     
-    const result = await loginWifiUser(loginEmail, loginPassword, macAddress, detectedController, arubaParams)
+    const result = await loginWifiUser(loginEmail, loginPassword, macAddress, detectedController)
     
     if (result.success) {
       // Build success page URL with parameters
@@ -121,7 +119,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
     setLoading(true)
     setError(null)
     
-    const result = await loginWithVoucher(voucherCode, macAddress, detectedController, arubaParams)
+    const result = await loginWithVoucher(voucherCode, macAddress, detectedController)
     
     if (result.success) {
       // Build success page URL with parameters

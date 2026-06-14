@@ -81,20 +81,6 @@ fonts.gstatic.com
 | Método | Redirect (sem RADIUS) |
 | Redirecionar após login | Sim (URL original do cliente) |
 
-### Modo de autenticação do Portal do Convidado
-
-No Instant On, em **Redes → Portal do convidado → Autenticação**, existem dois modos:
-
-| Modo | Como o acesso é liberado |
-|------|--------------------------|
-| Autenticação de Convidado (padrão) | O AP usa a própria splash page interna |
-| **Confirmação do Portal de Convidados** | O portal externo deve retornar o token `Aruba.InstantOn.Acknowledge` no corpo da resposta. **Este é o modo suportado por este sistema.** |
-
-> Se você usa "Confirmação do Portal de Convidados", o sistema já trata isso
-> automaticamente: após o login/voucher o cliente é enviado para
-> `/api/aruba/acknowledge`, que emite o token e libera o acesso. NÃO configure
-> um `/cgi-bin/login` — ele não existe nesse modo e causa o erro 404.
-
 ---
 
 ## Parâmetros enviados pela Aruba
@@ -149,7 +135,6 @@ https://portal.centerent.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname
 | Portal não abre / tela em branco | Domínio fora do Walled Garden | Adicionar o domínio do portal no Walled Garden |
 | Erro de certificado | HTTPS não configurado | Confirmar SSL ativo no domínio da Vercel |
 | Redireciona mas não loga | URL do servidor incorreta | Conferir a URL no campo "URL do Servidor" |
-| "404 captive portal not find ecp config" após login | No modo **"Confirmação do Portal de Convidados"** (Guest Portal Acknowledgement) NÃO existe o endpoint `/cgi-bin/login`. Redirecionar para ele gera esse 404 | Corrigido: nesse modo o portal retorna o token `Aruba.InstantOn.Acknowledge` no corpo da resposta (via rota `/api/aruba/acknowledge`), que é o que libera o acesso. O AP detecta o token e só então o usuário é redirecionado ao destino final. Confirme que o domínio do portal está em "Domínios permitidos" |
 | Log não aparece no admin | AP não está redirecionando | Confirmar tipo "Portal Captivo Externo" na rede Guest |
 
 ---
