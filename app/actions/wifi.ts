@@ -221,15 +221,18 @@ async function authorizeOnController(
         }
       }
       
-      // Aruba Instant On confirmation mode: the acknowledge endpoint emits the
-      // "Aruba.InstantOn.Acknowledge" token and forwards the user afterwards.
+      // Aruba auth flow depends on the mode configured by the admin (and set
+      // on the AP). 'confirmation' returns the Acknowledge token; 'radius'
+      // redirects to /cgi-bin/login with the single-use token.
+      const authMode = settings.arubaAuthMode === 'radius' ? 'radius' : 'confirmation'
       const result = await aruba.authorizeGuest(
         macAddress,
         minutes,
         clientIp,
         arubaParams,
         credentials,
-        settings.successRedirectUrl || undefined
+        settings.successRedirectUrl || undefined,
+        authMode
       )
       return { success: true, redirectUrl: result.redirectUrl }
     } catch (error) {
@@ -303,6 +306,8 @@ export async function getPortalSettings() {
       defaultSpeedDown: 10240,
       defaultSpeedUp: 5120,
       requireApproval: true,
+      controllerType: 'none',
+      arubaAuthMode: 'confirmation',
       updatedAt: new Date(),
     }
     await db.insert(portalSettings).values(defaultSettings)
@@ -328,6 +333,7 @@ export async function updateControllerSettings(data: {
   arubaControllerUrl: string
   arubaClientId: string
   arubaClientSecret: string
+  arubaAuthMode?: string
 }) {
   await db.update(portalSettings).set({
     controllerType: data.controllerType,
@@ -340,6 +346,7 @@ export async function updateControllerSettings(data: {
     arubaControllerUrl: data.arubaControllerUrl,
     arubaClientId: data.arubaClientId,
     arubaClientSecret: data.arubaClientSecret,
+    arubaAuthMode: data.arubaAuthMode ?? 'confirmation',
     updatedAt: new Date()
   }).where(eq(portalSettings.id, 'default'))
   revalidatePath('/admin')

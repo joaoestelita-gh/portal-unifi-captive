@@ -43,17 +43,28 @@ class ArubaController {
     clientIp?: string,
     arubaParams?: ArubaRedirectParams,
     credentials?: ArubaAuthCredentials,
-    finalRedirect?: string
+    finalRedirect?: string,
+    authMode: 'confirmation' | 'radius' = 'confirmation'
   ): Promise<{ redirectUrl: string }> {
-    // RADIUS mode ("Autenticação de Convidado (padrão)" no Instant On).
-    //
+    // The Aruba Instant On Guest Portal supports two authentication flows. The
+    // admin chooses which one in the portal settings, and it MUST match the
+    // mode selected on the AP (Redes → Portal do convidado → Autenticação).
+
+    // --- Mode 1: "Confirmação do Portal de Convidados" (default) -------------
+    // There is NO /cgi-bin/login endpoint in this mode. Redirecting there is
+    // exactly what produces "404 captive portal not find ecp config". Instead,
+    // the splash page must return the token "Aruba.InstantOn.Acknowledge". We
+    // send the browser to our acknowledge endpoint which emits that token.
+    if (authMode === 'confirmation') {
+      return { redirectUrl: '/api/aruba/acknowledge' }
+    }
+
+    // --- Mode 2: "Autenticação de Convidado (padrão)" via RADIUS -------------
     // After our portal validates the user/voucher, the browser must be sent to
     // the AP login endpoint (`/cgi-bin/login`) on the captive-portal host the
-    // AP provided in `switchip` (e.g. "securelogin.arubanetworks.com"). The AP
-    // then submits `user`/`password` to the configured RADIUS server. We pass a
-    // single-use RADIUS token as both user and password so the real credentials
-    // are never exposed in the URL. FreeRADIUS validates that token against our
-    // REST endpoint and grants access — eliminating the "ecp config" 404.
+    // AP provided in `switchip`. The AP submits `user`/`password` to the
+    // configured RADIUS server. We pass a single-use RADIUS token as both user
+    // and password so real credentials are never exposed in the URL.
 
     // Determine the login host. Prefer the switchip host sent by the AP; fall
     // back to the manually configured controller URL only when missing.
