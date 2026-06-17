@@ -27,6 +27,7 @@ interface ControllerSettings {
   arubaControllerUrl?: string | null
   arubaClientId?: string | null
   arubaClientSecret?: string | null
+  arubaAuthMode?: string | null
 }
 
 interface ControllerSetupProps {
@@ -86,6 +87,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [arubaUrl, setArubaUrl] = useState(settings.arubaControllerUrl || '')
   const [arubaClientId, setArubaClientId] = useState(settings.arubaClientId || '')
   const [arubaClientSecret, setArubaClientSecret] = useState(settings.arubaClientSecret || '')
+  const [arubaAuthMode, setArubaAuthMode] = useState(settings.arubaAuthMode || 'confirmation')
 
   // Debug logs state
   const [portalLogs, setPortalLogs] = useState<PortalLog[]>([])
@@ -142,6 +144,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
         arubaControllerUrl: arubaUrl,
         arubaClientId,
         arubaClientSecret,
+        arubaAuthMode,
       })
       setTestResult({ success: true, message: 'Configuracoes salvas com sucesso!' })
     } catch {
@@ -696,6 +699,68 @@ setLoadingSites(false)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Seletor de modo de autenticacao Aruba */}
+              <div className="p-4 bg-background/50 rounded-lg border border-green-500/30 space-y-3">
+                <div>
+                  <h4 className="font-medium text-foreground">Modo de autenticacao</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Escolha o modo que esta configurado no AP (Redes &rarr; Portal do convidado &rarr; Autenticacao). Os dois lados precisam coincidir.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setArubaAuthMode('confirmation')}
+                    className={`text-left p-3 rounded-lg border transition-colors ${
+                      arubaAuthMode === 'confirmation'
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-border bg-background/50 hover:border-green-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {arubaAuthMode === 'confirmation' && <CheckCircle className="w-4 h-4 text-green-400" />}
+                      <span className="font-medium text-foreground">Confirmacao (padrao)</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      &quot;Confirmacao do Portal de Convidados&quot;. Nao precisa de servidor RADIUS. Recomendado para comecar.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setArubaAuthMode('radius')}
+                    className={`text-left p-3 rounded-lg border transition-colors ${
+                      arubaAuthMode === 'radius'
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-border bg-background/50 hover:border-green-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {arubaAuthMode === 'radius' && <CheckCircle className="w-4 h-4 text-green-400" />}
+                      <span className="font-medium text-foreground">RADIUS</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      &quot;Autenticacao de Convidado&quot;. Exige um servidor FreeRADIUS na VPS (veja docs/INSTALACAO-FREERADIUS.md).
+                    </p>
+                  </button>
+                </div>
+                {arubaAuthMode === 'confirmation' && (
+                  <div className="flex items-start gap-2 p-3 bg-green-500/10 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+                    <span className="text-xs text-foreground">
+                      No AP, selecione &quot;Confirmacao do Portal de Convidados&quot; e adicione o dominio do portal em &quot;Dominios permitidos&quot;.
+                    </span>
+                  </div>
+                )}
+                {arubaAuthMode === 'radius' && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg">
+                    <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span className="text-xs text-foreground">
+                      No AP, selecione &quot;Autenticacao de Convidado&quot; e aponte o servidor RADIUS para o IP da sua VPS. O FreeRADIUS precisa estar configurado.
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <div className="p-4 bg-background/50 rounded-lg border border-green-500/30">
                 <p className="text-sm text-muted-foreground mb-3">
                   O Aruba Instant On nao possui API publica. A integracao funciona via <strong className="text-foreground">redirect</strong>: 

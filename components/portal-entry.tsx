@@ -17,6 +17,9 @@ export interface PortalSearchParams {
   apmac?: string
   vcname?: string
   ip?: string
+  // Aruba Instant On may send the client MAC/IP with a `client` prefix
+  clientmac?: string
+  clientip?: string
   // Skip auto-login (for testing)
   force?: string
 }
@@ -28,8 +31,9 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
   const settings = await getPortalSettings()
 
   // UniFi sends: mac, ap, url, t, ssid
-  // Aruba Instant On sends: cmd, mac, ip, essid, apname, apmac, switchip, vcname, url
-  const macAddress = params.mac || ''
+  // Aruba Instant On sends: cmd, clientmac/mac, clientip/ip, essid, apname, apmac, switchip, vcname, url
+  const macAddress = params.mac || params.clientmac || ''
+  const clientIp = params.ip || params.clientip || ''
   const redirectUrl = params.url || settings.successRedirectUrl || 'https://google.com'
   const ssid = params.ssid || params.essid || ''
 
@@ -41,8 +45,8 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
   const arubaParams =
     controller === 'aruba'
       ? {
-          mac: params.mac,
-          ip: params.ip,
+          mac: macAddress,
+          ip: clientIp,
           essid: params.essid,
           apname: params.apname,
           apmac: params.apmac,
@@ -57,15 +61,15 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
     addPortalLog({
       timestamp: new Date().toISOString(),
       controller,
-      mac: params.mac || null,
-      ip: params.ip || null,
+      mac: macAddress || null,
+      ip: clientIp || null,
       ssid: params.ssid || params.essid || null,
       apName: params.apname || params.ap || null,
       params: Object.fromEntries(
         Object.entries(params).filter(([, v]) => v !== undefined)
       ) as Record<string, string>,
     })
-    console.log('[Portal] Access logged:', controller, params.mac)
+    console.log('[Portal] Access logged:', controller, macAddress)
   }
 
   // Auto-reconnect: if this MAC already has an active session, skip the form.
