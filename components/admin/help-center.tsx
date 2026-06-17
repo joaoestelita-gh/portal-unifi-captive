@@ -439,7 +439,7 @@ function BothSection() {
           <p>
             Selecione <strong className="text-foreground">Ambas</strong> em
             <strong className="text-foreground"> Painel Admin &gt; Controladora</strong>. O painel mostra os campos
-            das duas controladoras ao mesmo tempo: preencha os dados da UniFi e siga as instrucoes de redirect da Aruba.
+            das duas controladoras ao mesmo tempo: preencha os dados de API da UniFi e siga as instrucoes de RADIUS da Aruba.
           </p>
         </CardContent>
       </Card>
@@ -454,7 +454,7 @@ function BothSection() {
           <Table
             head={['Parametro recebido', 'Controladora detectada', 'Acao']}
             rows={[
-              ['cmd=login', 'Aruba Instant On', 'Libera via redirect'],
+              ['cmd=login', 'Aruba Instant On', 'Libera via RADIUS (/cgi-bin/login)'],
               ['ap=XX:XX:XX', 'UniFi', 'Autoriza via API ativa'],
               ['Nenhum', 'Acesso direto', 'Mostra o portal normalmente'],
             ]}
