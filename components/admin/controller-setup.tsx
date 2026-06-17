@@ -43,8 +43,8 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   
   // Controller type
-  const [controllerType, setControllerType] = useState<'none' | 'unifi' | 'aruba'>(
-    (settings.controllerType as 'none' | 'unifi' | 'aruba') || 'none'
+  const [controllerType, setControllerType] = useState<'none' | 'unifi' | 'aruba' | 'both'>(
+    (settings.controllerType as 'none' | 'unifi' | 'aruba' | 'both') || 'none'
   )
   
   // UniFi states
