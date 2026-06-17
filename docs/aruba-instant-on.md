@@ -1,18 +1,25 @@
 # Configuração do Portal Captivo - Aruba Instant On
 
 Guia completo para configurar o Portal Captivo Externo no Aruba Instant On
-e integrar com o sistema.
+com autenticação via servidor RADIUS externo (FreeRADIUS).
 
 ---
 
 ## Visão Geral
 
-O Aruba Instant On usa o método **Portal Captivo Externo (External Captive Portal)**.
+O Aruba Instant On usa o método **Portal Captivo Externo (External Captive Portal)**
+com autenticação via **servidor RADIUS externo (FreeRADIUS)**.
 Quando um cliente conecta na rede Guest, o AP redireciona o navegador para a URL
 do nosso portal, passando parâmetros na query string (MAC, SSID, nome do AP, etc.).
 
-Não há API de autorização ativa no Instant On — a liberação acontece via redirect.
-O cliente é desconectado automaticamente quando a sessão expira no próprio AP.
+Após o login no portal, o cliente é enviado para o endpoint de login do AP
+(`/cgi-bin/login`) com um token de uso único. O AP valida esse token contra o
+servidor RADIUS configurado e só então libera o acesso.
+
+> **Importante:** o modo **"Confirmação do Portal de Convidados"** (acknowledgement)
+> **não é mais suportado** por este sistema, por ser instável em HTTPS. Use sempre
+> **"Autenticação de Convidado (padrão)"** com RADIUS. O guia completo de instalação
+> do servidor está em [`INSTALACAO-FREERADIUS.md`](./INSTALACAO-FREERADIUS.md).
 
 ---
 
@@ -20,6 +27,7 @@ O cliente é desconectado automaticamente quando a sessão expira no próprio AP
 
 | Requisito | Descrição |
 |-----------|-----------|
+| Servidor RADIUS | FreeRADIUS instalado e acessível na sua VPS (portas UDP 1812/1813) |
 | HTTPS válido | O domínio do portal precisa de certificado SSL (a Vercel emite automaticamente) |
 | Domínio configurado | Adicionar o domínio no projeto Vercel (Settings → Domains) |
 | Rede Guest | Uma rede de visitantes criada no Instant On |
@@ -33,10 +41,11 @@ O cliente é desconectado automaticamente quando a sessão expira no próprio AP
 |---|------|-------------|
 | 1 | App ou portal.arubainstanton.com | Acesse sua conta |
 | 2 | Redes | Selecione sua rede Guest (visitantes) |
-| 3 | Segurança → Tipo de Portal | Escolha "Portal Captivo Externo" |
-| 4 | URL do Servidor | Cole a URL do portal (ver abaixo) |
-| 5 | Domínios Permitidos (Walled Garden) | Adicione os domínios necessários |
-| 6 | Salvar | Confirme as configurações |
+| 3 | Autenticação | Escolha "Autenticação de Convidado (padrão)" (NÃO use Confirmação) |
+| 4 | Tipo de Portal | Defina "Externa" e cole a URL do portal |
+| 5 | Servidor RADIUS | Informe o IP da VPS, portas 1812/1813 e o segredo compartilhado |
+| 6 | Domínios Permitidos (Walled Garden) | Adicione o domínio do portal |
+| 7 | Salvar | Confirme as configurações |
 
 ---
 
@@ -57,6 +66,23 @@ https://portal.centernet.inf.br/portal
 
 ---
 
+## Servidor RADIUS (na tela do Aruba)
+
+Ao escolher "Autenticação de Convidado (padrão)", a seção do servidor RADIUS
+aparece na tela. Preencha:
+
+| Campo | Valor |
+|-------|-------|
+| Servidor / Endereço IP | IP público da sua VPS (onde roda o FreeRADIUS) |
+| Porta de autenticação | 1812 |
+| Porta de accounting | 1813 |
+| Segredo compartilhado | mesmo Shared Secret do `clients.conf` do FreeRADIUS |
+
+> O AP precisa **alcançar a VPS** nas portas UDP 1812/1813. Garanta que o firewall
+> da VPS libere essas portas (veja [`INSTALACAO-FREERADIUS.md`](./INSTALACAO-FREERADIUS.md)).
+
+---
+
 ## Domínios Permitidos (Walled Garden)
 
 Adicione estes domínios para que o portal carregue ANTES da autenticação:
@@ -69,31 +95,8 @@ fonts.gstatic.com
 
 > IMPORTANTE: Antes de autenticar, o cliente não tem internet. Para o portal
 > carregar, o domínio do portal DEVE estar no Walled Garden, incluindo a
-> liberação de DNS para resolver o domínio.
-
----
-
-## Configuração de Autenticação
-
-| Campo | Valor |
-|-------|-------|
-| Tipo de autenticação | Externa (External Captive Portal) |
-| Método | Redirect (sem RADIUS) |
-| Redirecionar após login | Sim (URL original do cliente) |
-
-### Modo de autenticação do Portal do Convidado
-
-No Instant On, em **Redes → Portal do convidado → Autenticação**, existem dois modos:
-
-| Modo | Como o acesso é liberado |
-|------|--------------------------|
-| Autenticação de Convidado (padrão) | O AP usa a própria splash page interna |
-| **Confirmação do Portal de Convidados** | O portal externo deve retornar o token `Aruba.InstantOn.Acknowledge` no corpo da resposta. **Este é o modo suportado por este sistema.** |
-
-> Se você usa "Confirmação do Portal de Convidados", o sistema já trata isso
-> automaticamente: após o login/voucher o cliente é enviado para
-> `/api/aruba/acknowledge`, que emite o token e libera o acesso. NÃO configure
-> um `/cgi-bin/login` — ele não existe nesse modo e causa o erro 404.
+> liberação de DNS para resolver o domínio. Use a mesma grafia exata do domínio
+> na URL do portal e aqui (`portal.centernet.inf.br`).
 
 ---
 
@@ -109,7 +112,7 @@ Quando o AP redireciona, ele envia parâmetros na URL. O sistema lê os seguinte
 | essid | SSID da rede |
 | apname | Nome do Access Point |
 | apmac | MAC do Access Point |
-| switchip | IP do switch/AP |
+| switchip | IP do switch/AP (host de login para o RADIUS) |
 | vcname | Nome do Virtual Controller |
 | url | URL original que o cliente tentava acessar |
 
@@ -123,12 +126,14 @@ https://portal.centernet.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname
 
 ## Checklist de Configuração
 
-1. Adicionar o domínio no projeto Vercel (Settings → Domains)
-2. Aguardar o certificado SSL ficar ativo (cadeado verde)
-3. Configurar a URL no Aruba: `https://SEU-DOMINIO/portal`
-4. Adicionar os domínios no Walled Garden (incluindo DNS)
-5. Definir tipo de portal como "Portal Captivo Externo"
-6. Salvar e testar conectando um celular na rede Guest
+1. Instalar e configurar o FreeRADIUS na VPS (ver `INSTALACAO-FREERADIUS.md`)
+2. Adicionar o domínio no projeto Vercel (Settings → Domains)
+3. Aguardar o certificado SSL ficar ativo (cadeado verde)
+4. Configurar a URL no Aruba: `https://SEU-DOMINIO/portal`
+5. Preencher os dados do servidor RADIUS (IP da VPS, portas 1812/1813, segredo)
+6. Adicionar o domínio no Walled Garden (incluindo DNS)
+7. Definir o modo como "Autenticação de Convidado (padrão)"
+8. Salvar e testar conectando um celular na rede Guest
 
 ---
 
@@ -136,8 +141,9 @@ https://portal.centernet.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname
 
 1. Conecte um dispositivo (celular) na rede Guest
 2. O Aruba deve redirecionar automaticamente para o portal
-3. Acompanhe em tempo real no painel admin → "Logs de Acesso ao Portal"
-4. Se o log aparecer com a tag verde "Aruba", a configuração está correta
+3. Faça login/insira o voucher — o cliente é enviado ao `/cgi-bin/login` do AP
+4. Acompanhe em tempo real no painel admin → "Logs de Acesso ao Portal"
+5. Se o log aparecer com a tag verde "Aruba", a configuração está correta
 
 ---
 
@@ -148,16 +154,17 @@ https://portal.centernet.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname
 | "Site não encontrado" ao conectar | DNS bloqueado antes do login | Adicionar domínio + DNS no Walled Garden |
 | Portal não abre / tela em branco | Domínio fora do Walled Garden | Adicionar o domínio do portal no Walled Garden |
 | Erro de certificado | HTTPS não configurado | Confirmar SSL ativo no domínio da Vercel |
-| Redireciona mas não loga | URL do servidor incorreta | Conferir a URL no campo "URL do Servidor" |
-| "404 captive portal not find ecp config" após login | No modo **"Confirmação do Portal de Convidados"** (Guest Portal Acknowledgement) NÃO existe o endpoint `/cgi-bin/login`. Redirecionar para ele gera esse 404 | Corrigido: nesse modo o portal retorna o token `Aruba.InstantOn.Acknowledge` no corpo da resposta (via rota `/api/aruba/acknowledge`), que é o que libera o acesso. O AP detecta o token e só então o usuário é redirecionado ao destino final. Confirme que o domínio do portal está em "Domínios permitidos" |
-| Log não aparece no admin | AP não está redirecionando | Confirmar tipo "Portal Captivo Externo" na rede Guest |
+| Loga no portal mas não libera | AP não alcança o servidor RADIUS | Liberar UDP 1812/1813 e conferir IP/segredo do RADIUS |
+| "Access-Reject" no RADIUS | Segredo compartilhado ou token incorreto | Conferir o Shared Secret no `clients.conf` e na tela do AP |
+| "404 captive portal not find ecp config" após login | Rede Guest ainda no modo "Confirmação do Portal de Convidados" | Trocar para "Autenticação de Convidado (padrão)" com RADIUS |
+| Log não aparece no admin | AP não está redirecionando | Confirmar tipo "Externa" e modo "Autenticação de Convidado" na rede Guest |
 
 ---
 
 ## Observações Importantes
 
-- O Aruba Instant On NÃO possui API para desautorização ativa. O cliente é
-  desconectado apenas quando a sessão expira no AP.
-- A liberação de acesso é feita 100% via redirect.
+- A autenticação acontece no **servidor RADIUS externo (FreeRADIUS)** instalado na
+  sua VPS — não no acknowledgement da controladora.
 - Use sempre HTTPS — o Instant On rejeita portais sem certificado válido.
 - As rotas `/` e `/portal` são equivalentes no sistema.
+- O domínio na URL do portal e em "Domínios permitidos" deve ter a grafia idêntica.

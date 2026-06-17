@@ -185,14 +185,20 @@ function ArubaSection() {
         <CardHeader><CardTitle className="text-lg">Visao Geral</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>
-            O Aruba Instant On usa o metodo <strong className="text-foreground">Portal Captivo Externo</strong>.
+            O Aruba Instant On usa o metodo <strong className="text-foreground">Portal Captivo Externo</strong> com
+            autenticacao via <strong className="text-foreground">servidor RADIUS externo (FreeRADIUS)</strong>.
             Quando um cliente conecta na rede Guest, o AP redireciona o navegador para a URL do portal,
             passando parametros na query string (MAC, SSID, nome do AP, etc.).
           </p>
           <p>
-            Nao ha API de autorizacao ativa no Instant On &mdash; a liberacao acontece via redirect.
-            O cliente e desconectado automaticamente quando a sessao expira no proprio AP.
+            Apos o login no portal, o cliente e enviado para o endpoint de login do AP (<code className="text-foreground">/cgi-bin/login</code>)
+            com um token de uso unico. O AP valida esse token contra o seu servidor RADIUS e libera o acesso.
           </p>
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300">
+            <strong className="text-amber-200">Importante:</strong> o modo &quot;Confirmacao do Portal de Convidados&quot;
+            (acknowledgement) <strong className="text-amber-200">nao e mais suportado</strong> por ser instavel em HTTPS.
+            Use sempre &quot;Autenticacao de Convidado (padrao)&quot; com RADIUS.
+          </div>
         </CardContent>
       </Card>
 
@@ -201,13 +207,13 @@ function ArubaSection() {
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>
             Selecione <strong className="text-foreground">HP Aruba</strong> (ou <strong className="text-foreground">Ambas</strong>)
-            em <strong className="text-foreground">Painel Admin &gt; Controladora</strong>. Como o Instant On nao possui
-            API publica, <strong className="text-foreground">nenhuma credencial precisa ser preenchida</strong> no painel.
+            em <strong className="text-foreground">Painel Admin &gt; Controladora</strong>. O painel exibe um guia com a
+            <strong className="text-foreground"> URL do portal</strong>, o <strong className="text-foreground">dominio permitido</strong> e
+            os <strong className="text-foreground">campos do servidor RADIUS</strong> que voce deve preencher na tela do Aruba.
           </p>
           <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">
-            O painel exibe diretamente a <strong className="text-green-200">URL do Servidor</strong> e o
-            <strong className="text-green-200"> dominio permitido</strong> ja prontos, com botao de copiar.
-            Basta cola-los no Aruba Instant On.
+            A autenticacao acontece no <strong className="text-green-200">FreeRADIUS</strong> instalado na sua VPS.
+            Veja o guia <strong className="text-green-200">docs/INSTALACAO-FREERADIUS.md</strong> para configurar o servidor.
           </div>
         </CardContent>
       </Card>
@@ -218,6 +224,7 @@ function ArubaSection() {
           <Table
             head={['Requisito', 'Descricao']}
             rows={[
+              ['Servidor RADIUS', 'FreeRADIUS instalado e acessivel na sua VPS (portas UDP 1812/1813)'],
               ['HTTPS valido', 'O dominio do portal precisa de certificado SSL (a Vercel emite automaticamente)'],
               ['Dominio configurado', 'Adicionar o dominio no projeto Vercel (Settings > Domains)'],
               ['Rede Guest', 'Uma rede de visitantes criada no Instant On'],
@@ -234,9 +241,10 @@ function ArubaSection() {
             {[
               ['App ou portal.arubainstanton.com', 'Acesse sua conta'],
               ['Redes', 'Selecione sua rede Guest (visitantes)'],
-              ['Seguranca > Tipo de Portal', 'Escolha "Portal Captivo Externo"'],
-              ['URL do Servidor', 'Cole a URL do portal (ver abaixo)'],
-              ['Dominios Permitidos (Walled Garden)', 'Adicione os dominios necessarios'],
+              ['Autenticacao', 'Escolha "Autenticacao de Convidado (padrao)" (NAO use Confirmacao)'],
+              ['Tipo de Portal', 'Defina "Externa" e cole a URL do portal'],
+              ['Servidor RADIUS', 'Informe o IP da VPS, portas 1812/1813 e o segredo compartilhado'],
+              ['Dominios Permitidos (Walled Garden)', 'Adicione o dominio do portal'],
               ['Salvar', 'Confirme as configuracoes'],
             ].map(([local, acao], i) => (
               <li key={i} className="flex gap-3">
@@ -245,6 +253,25 @@ function ArubaSection() {
               </li>
             ))}
           </ol>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Servidor RADIUS (na tela do Aruba)</CardTitle></CardHeader>
+        <CardContent>
+          <Table
+            head={['Campo', 'Valor']}
+            rows={[
+              ['Servidor / Endereco IP', 'IP publico da sua VPS (onde roda o FreeRADIUS)'],
+              ['Porta de autenticacao', '1812'],
+              ['Porta de accounting', '1813'],
+              ['Segredo compartilhado', 'mesmo Shared Secret do clients.conf do FreeRADIUS'],
+            ]}
+          />
+          <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300 text-sm">
+            O AP precisa <strong className="text-amber-200">alcancar a VPS</strong> nas portas UDP 1812/1813.
+            Garanta que o firewall da VPS libere essas portas.
+          </div>
         </CardContent>
       </Card>
 
@@ -271,6 +298,7 @@ fonts.gstatic.com</pre>
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300">
             <strong className="text-amber-200">IMPORTANTE:</strong> Antes de autenticar, o cliente nao tem internet.
             Para o portal carregar, o dominio DEVE estar no Walled Garden, incluindo a liberacao de DNS.
+            Use a mesma grafia exata do dominio na URL do portal e aqui (<strong className="text-amber-200">portal.centernet.inf.br</strong>).
           </div>
         </CardContent>
       </Card>
@@ -287,7 +315,7 @@ fonts.gstatic.com</pre>
               ['essid', 'SSID da rede'],
               ['apname', 'Nome do Access Point'],
               ['apmac', 'MAC do Access Point'],
-              ['switchip', 'IP do switch/AP'],
+              ['switchip', 'IP do switch/AP (host de login para o RADIUS)'],
               ['vcname', 'Nome do Virtual Controller'],
               ['url', 'URL original que o cliente tentava acessar'],
             ]}
@@ -306,8 +334,9 @@ fonts.gstatic.com</pre>
               ['"Site nao encontrado" ao conectar', 'DNS bloqueado antes do login', 'Adicionar dominio + DNS no Walled Garden'],
               ['Portal nao abre / tela em branco', 'Dominio fora do Walled Garden', 'Adicionar o dominio do portal no Walled Garden'],
               ['Erro de certificado', 'HTTPS nao configurado', 'Confirmar SSL ativo no dominio da Vercel'],
-              ['Redireciona mas nao loga', 'URL do servidor incorreta', 'Conferir a URL no campo "URL do Servidor"'],
-              ['Log nao aparece no admin', 'AP nao esta redirecionando', 'Confirmar tipo "Portal Captivo Externo"'],
+              ['Loga no portal mas nao libera', 'AP nao alcanca o RADIUS', 'Liberar UDP 1812/1813 e conferir IP/segredo do RADIUS'],
+              ['"Access-Reject" no RADIUS', 'Segredo ou token incorreto', 'Conferir o Shared Secret no clients.conf e no AP'],
+              ['Log nao aparece no admin', 'AP nao esta redirecionando', 'Confirmar tipo "Externa" e modo "Autenticacao de Convidado"'],
             ]}
           />
         </CardContent>
@@ -410,7 +439,7 @@ function BothSection() {
           <p>
             Selecione <strong className="text-foreground">Ambas</strong> em
             <strong className="text-foreground"> Painel Admin &gt; Controladora</strong>. O painel mostra os campos
-            das duas controladoras ao mesmo tempo: preencha os dados da UniFi e siga as instrucoes de redirect da Aruba.
+            das duas controladoras ao mesmo tempo: preencha os dados de API da UniFi e siga as instrucoes de RADIUS da Aruba.
           </p>
         </CardContent>
       </Card>
@@ -425,7 +454,7 @@ function BothSection() {
           <Table
             head={['Parametro recebido', 'Controladora detectada', 'Acao']}
             rows={[
-              ['cmd=login', 'Aruba Instant On', 'Libera via redirect'],
+              ['cmd=login', 'Aruba Instant On', 'Libera via RADIUS (/cgi-bin/login)'],
               ['ap=XX:XX:XX', 'UniFi', 'Autoriza via API ativa'],
               ['Nenhum', 'Acesso direto', 'Mostra o portal normalmente'],
             ]}
