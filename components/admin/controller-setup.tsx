@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, XCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2 } from 'lucide-react'
+import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, XCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus } from 'lucide-react'
 import { updateControllerSettings, testControllerConnection, fetchUnifiSites, fetchUnifiSiteInfo } from '@/app/actions/wifi'
 
 interface PortalLog {
@@ -43,8 +43,8 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   
   // Controller type
-  const [controllerType, setControllerType] = useState<'none' | 'unifi' | 'aruba'>(
-    (settings.controllerType as 'none' | 'unifi' | 'aruba') || 'none'
+  const [controllerType, setControllerType] = useState<'none' | 'unifi' | 'aruba' | 'both'>(
+    (settings.controllerType as 'none' | 'unifi' | 'aruba' | 'both') || 'none'
   )
   
   // UniFi states
@@ -752,11 +752,66 @@ setLoadingSites(false)
                   </div>
                 )}
                 {arubaAuthMode === 'radius' && (
-                  <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg">
-                    <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <span className="text-xs text-foreground">
-                      No AP, selecione &quot;Autenticacao de Convidado&quot; e aponte o servidor RADIUS para o IP da sua VPS. O FreeRADIUS precisa estar configurado.
-                    </span>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg">
+                      <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span className="text-xs text-foreground">
+                        No AP, selecione &quot;Autenticacao de Convidado (padrao)&quot; e aponte o servidor RADIUS para o IP da sua VPS. O FreeRADIUS precisa estar configurado (veja docs/INSTALACAO-FREERADIUS.md).
+                      </span>
+                    </div>
+
+                    {/* O que muda na tela do Aruba ao escolher RADIUS */}
+                    <div className="p-3 rounded-lg border border-border bg-background/50 space-y-3">
+                      <p className="text-xs font-medium text-foreground">
+                        Na tela do Aruba (Portal do convidado &rarr; Autenticacao), o que muda:
+                      </p>
+
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                          Campos do portal externo (continuam iguais ao modo Confirmacao):
+                        </p>
+                        <ul className="space-y-1">
+                          {[
+                            ['Tipo', 'Externa'],
+                            ['URL do portal', 'https://portal.centerent.inf.br/portal'],
+                            ['URL de redirecionamento', 'https://www.google.com.br/'],
+                            ['Dominios permitidos', 'portal.centerent.inf.br'],
+                          ].map(([label, value]) => (
+                            <li key={label} className="flex items-start gap-2 text-xs">
+                              <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground">
+                                <span className="text-foreground">{label}:</span> {value}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                          Campos novos que aparecem (secao Servidor RADIUS):
+                        </p>
+                        <ul className="space-y-1">
+                          {[
+                            ['Servidor / Endereco IP', 'IP publico da sua VPS (onde roda o FreeRADIUS)'],
+                            ['Porta de autenticacao', '1812'],
+                            ['Porta de accounting', '1813'],
+                            ['Segredo compartilhado', 'mesmo Shared Secret do clients.conf'],
+                          ].map(([label, value]) => (
+                            <li key={label} className="flex items-start gap-2 text-xs">
+                              <Plus className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground">
+                                <span className="text-foreground">{label}:</span> {value}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        Use a mesma grafia exata do dominio na URL do portal e em Dominios permitidos (cuidado com <span className="text-foreground">centerent</span> vs <span className="text-foreground">centernet</span>), e prefira https. O AP precisa alcancar a VPS nas portas UDP 1812/1813.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
