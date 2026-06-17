@@ -148,8 +148,5 @@ export const portalSettings = pgTable('portal_settings', {
   arubaControllerUrl: text('arubaControllerUrl'),
   arubaClientId: text('arubaClientId'),
   arubaClientSecret: text('arubaClientSecret'),
-  // Aruba auth flow: 'confirmation' (Guest Portal Acknowledgement, no RADIUS)
-  // or 'radius' (Guest Authentication via external RADIUS server / FreeRADIUS)
-  arubaAuthMode: text('arubaAuthMode').default('confirmation'),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })

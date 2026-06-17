@@ -43,23 +43,15 @@ class ArubaController {
     clientIp?: string,
     arubaParams?: ArubaRedirectParams,
     credentials?: ArubaAuthCredentials,
-    finalRedirect?: string,
-    authMode: 'confirmation' | 'radius' = 'confirmation'
+    finalRedirect?: string
   ): Promise<{ redirectUrl: string }> {
-    // The Aruba Instant On Guest Portal supports two authentication flows. The
-    // admin chooses which one in the portal settings, and it MUST match the
-    // mode selected on the AP (Redes → Portal do convidado → Autenticação).
-
-    // --- Mode 1: "Confirmação do Portal de Convidados" (default) -------------
-    // There is NO /cgi-bin/login endpoint in this mode. Redirecting there is
-    // exactly what produces "404 captive portal not find ecp config". Instead,
-    // the splash page must return the token "Aruba.InstantOn.Acknowledge". We
-    // send the browser to our acknowledge endpoint which emits that token.
-    if (authMode === 'confirmation') {
-      return { redirectUrl: '/api/aruba/acknowledge' }
-    }
-
-    // --- Mode 2: "Autenticação de Convidado (padrão)" via RADIUS -------------
+    // RADIUS flow only ("Autenticação de Convidado (padrão)" no Instant On).
+    //
+    // The "Confirmação do Portal de Convidados" (acknowledgement) flow was
+    // removed: authenticating through the controller acknowledgement token
+    // proved unreliable. The portal now always authenticates via an external
+    // RADIUS server (FreeRADIUS).
+    //
     // After our portal validates the user/voucher, the browser must be sent to
     // the AP login endpoint (`/cgi-bin/login`) on the captive-portal host the
     // AP provided in `switchip`. The AP submits `user`/`password` to the

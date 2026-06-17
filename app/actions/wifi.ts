@@ -221,18 +221,16 @@ async function authorizeOnController(
         }
       }
       
-      // Aruba auth flow depends on the mode configured by the admin (and set
-      // on the AP). 'confirmation' returns the Acknowledge token; 'radius'
-      // redirects to /cgi-bin/login with the single-use token.
-      const authMode = settings.arubaAuthMode === 'radius' ? 'radius' : 'confirmation'
+      // Aruba auth via RADIUS: the browser is redirected to /cgi-bin/login on
+      // the AP with a single-use token, which the AP validates against the
+      // external FreeRADIUS server.
       const result = await aruba.authorizeGuest(
         macAddress,
         minutes,
         clientIp,
         arubaParams,
         credentials,
-        settings.successRedirectUrl || undefined,
-        authMode
+        settings.successRedirectUrl || undefined
       )
       return { success: true, redirectUrl: result.redirectUrl }
     } catch (error) {
@@ -307,7 +305,16 @@ export async function getPortalSettings() {
       defaultSpeedUp: 5120,
       requireApproval: true,
       controllerType: 'none',
-      arubaAuthMode: 'confirmation',
+      unifiEnabled: false,
+      arubaEnabled: false,
+      unifiControllerUrl: null,
+      unifiUsername: null,
+      unifiPassword: null,
+      unifiSite: null,
+      arubaControllerUrl: null,
+      arubaClientId: null,
+      arubaClientSecret: null,
+      successRedirectUrl: null,
       updatedAt: new Date(),
     }
     await db.insert(portalSettings).values(defaultSettings)
@@ -333,7 +340,6 @@ export async function updateControllerSettings(data: {
   arubaControllerUrl: string
   arubaClientId: string
   arubaClientSecret: string
-  arubaAuthMode?: string
 }) {
   await db.update(portalSettings).set({
     controllerType: data.controllerType,
@@ -346,7 +352,6 @@ export async function updateControllerSettings(data: {
     arubaControllerUrl: data.arubaControllerUrl,
     arubaClientId: data.arubaClientId,
     arubaClientSecret: data.arubaClientSecret,
-    arubaAuthMode: data.arubaAuthMode ?? 'confirmation',
     updatedAt: new Date()
   }).where(eq(portalSettings.id, 'default'))
   revalidatePath('/admin')
