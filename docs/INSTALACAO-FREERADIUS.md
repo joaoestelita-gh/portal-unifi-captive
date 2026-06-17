@@ -247,19 +247,52 @@ Deve terminar com `Configuration appears to be OK`.
 
 ## Passo 6 — Configurar o Aruba Instant On
 
+> **O que muda em relação ao modo Confirmação?** Ao trocar a opção de
+> autenticação para "Autenticação de Convidado (padrão)", o painel do Instant On
+> **exibe campos novos** para o servidor RADIUS (servidor, portas e segredo).
+> A parte do portal externo (URL do portal, URL de redirecionamento e domínios
+> permitidos) continua igual — você só **ganha** a seção do RADIUS. Resumo:
+>
+> | Campo | Modo Confirmação | Modo RADIUS |
+> |---|---|---|
+> | Tipo / URL do portal | Sim | Sim |
+> | URL de redirecionamento | Sim | Sim |
+> | Domínios permitidos | Sim | Sim |
+> | **Servidor RADIUS (IP)** | — | **Sim (novo)** |
+> | **Porta de autenticação (1812)** | — | **Sim (novo)** |
+> | **Porta de accounting (1813)** | — | **Sim (novo)** |
+> | **Segredo compartilhado** | — | **Sim (novo)** |
+
 No app/portal web do Instant On:
 
 1. Vá em **Redes → (sua rede Guest) → Portal do convidado → Autenticação**.
-2. Selecione **"Autenticação de Convidado (padrão)"**.
+2. Em **Opções de autenticação**, selecione **"Autenticação de Convidado (padrão)"**.
    - **NÃO** use "Confirmação do Portal de Convidados" — é esse modo que gera o 404.
-3. Configure o **Portal Captivo Externo** apontando para `https://portal.centerent.inf.br`.
-4. Em **Servidor RADIUS**, preencha:
-   - **Servidor:** `IP_DA_SUA_VPS`
+   - Ao marcar essa opção, a seção **Servidor RADIUS** aparece na tela.
+3. Em **Identificação**, mantenha:
+   - **Tipo:** `Externa`
+   - **URL do portal:** `https://portal.centerent.inf.br/portal`
+   - **URL de redirecionamento:** `https://www.google.com.br/` (ou outro destino)
+   - **Atenção:** use a **mesma grafia exata** do domínio nos dois lugares
+     (cuidado com `centerent` vs `centernet`) e prefira **https**.
+4. Na seção **Servidor RADIUS** (que só aparece neste modo), preencha:
+   - **Servidor / Endereço IP:** `IP_PUBLICO_DA_SUA_VPS` (onde roda o FreeRADIUS)
    - **Porta de autenticação:** `1812`
    - **Porta de accounting:** `1813`
-   - **Segredo compartilhado:** o mesmo **Shared Secret RADIUS** do passo 3.
-5. Confirme que `portal.centerent.inf.br` está em **Domínios permitidos** (walled garden).
+   - **Segredo compartilhado:** o **mesmo Shared Secret RADIUS** do passo 3
+     (idêntico ao que está no `clients.conf`).
+   - Se houver opção de **timeout/retries**, pode deixar os valores padrão.
+5. Confirme que `portal.centerent.inf.br` está em **Domínios permitidos**
+   (walled garden) — com a grafia idêntica à URL do portal.
 6. Salve.
+
+> **Importante:** o `IP_PUBLICO_DA_SUA_VPS` precisa estar acessível pela internet
+> nas portas UDP 1812/1813 (passo 2). Se o AP não conseguir alcançar a VPS,
+> o login fica travado mesmo com tudo certo no portal.
+
+> **No painel admin do portal:** lembre-se de trocar o modo Aruba para **"RADIUS"**
+> em *Configuração da Controladora* — assim o portal passa a redirecionar para
+> `/cgi-bin/login` em vez de devolver o token de Confirmação.
 
 ---
 
