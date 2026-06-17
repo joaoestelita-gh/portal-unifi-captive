@@ -2,7 +2,7 @@
 
 Manual completo, passo a passo, para instalar e configurar o **FreeRADIUS** em
 uma VPS **Ubuntu/Debian**, integrado ao portal cativo hospedado em
-`https://portal.centerent.inf.br`.
+`https://portal.centernet.inf.br`.
 
 Ao final, o login por e-mail/senha e por voucher do portal será validado via
 RADIUS, eliminando o erro `404 captive portal not find ecp config`.
@@ -84,7 +84,7 @@ controladora veio o redirect):
 - VPS com **Ubuntu 20.04+ ou Debian 11+** e acesso `sudo`.
 - A VPS precisa ter um **IP público** alcançável pelo seu AP/rede.
 - O AP Aruba Instant On precisa **enxergar a VPS** nas portas UDP 1812/1813.
-- O portal já publicado e acessível em `https://portal.centerent.inf.br`
+- O portal já publicado e acessível em `https://portal.centernet.inf.br`
   (com certificado HTTPS válido).
 - A variável `RADIUS_REST_SECRET` já cadastrada no projeto (Vercel).
 
@@ -181,7 +181,7 @@ Localize o bloco `rest { ... }` e ajuste `connect_uri` e a seção `authorize`:
 
 ```
 rest {
-    connect_uri = "https://portal.centerent.inf.br"
+    connect_uri = "https://portal.centernet.inf.br"
 
     authorize {
         uri    = "${..connect_uri}/api/radius/authorize"
@@ -271,10 +271,10 @@ No app/portal web do Instant On:
    - Ao marcar essa opção, a seção **Servidor RADIUS** aparece na tela.
 3. Em **Identificação**, mantenha:
    - **Tipo:** `Externa`
-   - **URL do portal:** `https://portal.centerent.inf.br/portal`
+   - **URL do portal:** `https://portal.centernet.inf.br/portal`
    - **URL de redirecionamento:** `https://www.google.com.br/` (ou outro destino)
    - **Atenção:** use a **mesma grafia exata** do domínio nos dois lugares
-     (cuidado com `centerent` vs `centernet`) e prefira **https**.
+     (use sempre `portal.centernet.inf.br`) e prefira **https**.
 4. Na seção **Servidor RADIUS** (que só aparece neste modo), preencha:
    - **Servidor / Endereço IP:** `IP_PUBLICO_DA_SUA_VPS` (onde roda o FreeRADIUS)
    - **Porta de autenticação:** `1812`
@@ -282,7 +282,7 @@ No app/portal web do Instant On:
    - **Segredo compartilhado:** o **mesmo Shared Secret RADIUS** do passo 3
      (idêntico ao que está no `clients.conf`).
    - Se houver opção de **timeout/retries**, pode deixar os valores padrão.
-5. Confirme que `portal.centerent.inf.br` está em **Domínios permitidos**
+5. Confirme que `portal.centernet.inf.br` está em **Domínios permitidos**
    (walled garden) — com a grafia idêntica à URL do portal.
 6. Salve.
 
@@ -344,7 +344,7 @@ sudo systemctl status freeradius
 | Ainda aparece "404 ecp config" | Rede Guest ainda em "Confirmação do Portal" | Troque para "Autenticação de Convidado (padrão)" (passo 6) |
 | `Access-Reject` sempre | Token expirado ou `RADIUS_REST_SECRET` divergente | Confira o `secret` no módulo `rest` (passo 4) e gere um novo login |
 | FreeRADIUS não recebe nada | IP do cliente ou shared secret errado, ou firewall | Veja o IP de origem no debug (`freeradius -X`), ajuste `clients.conf` e libere UDP 1812 |
-| `check_cert` falha / erro TLS | Certificado HTTPS do portal inválido | Garanta certificado válido em `portal.centerent.inf.br` |
+| `check_cert` falha / erro TLS | Certificado HTTPS do portal inválido | Garanta certificado válido em `portal.centernet.inf.br` |
 | `radtest` dá timeout | Serviço parado ou porta bloqueada | Verifique `systemctl status freeradius` e o firewall |
 | Erro de sintaxe ao iniciar | Edição incorreta nos arquivos | Rode `sudo freeradius -CX` para ver a linha do erro |
 
@@ -374,7 +374,7 @@ radtest TOKEN TOKEN localhost 1812 SEU_SHARED_SECRET_RADIUS
 
 ## Contrato do endpoint REST (referência)
 
-`POST https://portal.centerent.inf.br/api/radius/authorize`
+`POST https://portal.centernet.inf.br/api/radius/authorize`
 
 Request (JSON):
 

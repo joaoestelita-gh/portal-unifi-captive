@@ -52,7 +52,7 @@ https://SEU-DOMINIO/portal
 Exemplo com domínio personalizado:
 
 ```
-https://portal.centerent.inf.br/portal
+https://portal.centernet.inf.br/portal
 ```
 
 ---
@@ -62,7 +62,7 @@ https://portal.centerent.inf.br/portal
 Adicione estes domínios para que o portal carregue ANTES da autenticação:
 
 ```
-portal.centerent.inf.br
+portal.centernet.inf.br
 fonts.googleapis.com
 fonts.gstatic.com
 ```
@@ -116,7 +116,7 @@ Quando o AP redireciona, ele envia parâmetros na URL. O sistema lê os seguinte
 Exemplo de redirecionamento recebido:
 
 ```
-https://portal.centerent.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname=AP01&switchip=X.X.X.X
+https://portal.centernet.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname=AP01&switchip=X.X.X.X
 ```
 
 ---

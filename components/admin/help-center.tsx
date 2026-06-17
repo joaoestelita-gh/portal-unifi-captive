@@ -257,7 +257,7 @@ function ArubaSection() {
           </p>
           <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">https://SEU-DOMINIO/portal</pre>
           <p>Exemplo com dominio personalizado:</p>
-          <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">https://portal.centerent.inf.br/portal</pre>
+          <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">https://portal.centernet.inf.br/portal</pre>
         </CardContent>
       </Card>
 
@@ -265,7 +265,7 @@ function ArubaSection() {
         <CardHeader><CardTitle className="text-lg">Dominios Permitidos (Walled Garden)</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>Adicione estes dominios para que o portal carregue ANTES da autenticacao:</p>
-          <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">portal.centerent.inf.br
+          <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">portal.centernet.inf.br
 fonts.googleapis.com
 fonts.gstatic.com</pre>
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300">
@@ -293,7 +293,7 @@ fonts.gstatic.com</pre>
             ]}
           />
           <p className="mt-4 text-sm text-muted-foreground">Exemplo de redirecionamento recebido:</p>
-          <pre className="mt-2 rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto text-xs">https://portal.centerent.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname=AP01</pre>
+          <pre className="mt-2 rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto text-xs">https://portal.centernet.inf.br/portal?cmd=login&mac=XX:XX:XX&essid=Guest&apname=AP01</pre>
         </CardContent>
       </Card>
 

@@ -773,9 +773,9 @@ setLoadingSites(false)
                         <ul className="space-y-1">
                           {[
                             ['Tipo', 'Externa'],
-                            ['URL do portal', 'https://portal.centerent.inf.br/portal'],
+                            ['URL do portal', 'https://portal.centernet.inf.br/portal'],
                             ['URL de redirecionamento', 'https://www.google.com.br/'],
-                            ['Dominios permitidos', 'portal.centerent.inf.br'],
+                            ['Dominios permitidos', 'portal.centernet.inf.br'],
                           ].map(([label, value]) => (
                             <li key={label} className="flex items-start gap-2 text-xs">
                               <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
@@ -809,7 +809,7 @@ setLoadingSites(false)
                       </div>
 
                       <p className="text-xs text-muted-foreground">
-                        Use a mesma grafia exata do dominio na URL do portal e em Dominios permitidos (cuidado com <span className="text-foreground">centerent</span> vs <span className="text-foreground">centernet</span>), e prefira https. O AP precisa alcancar a VPS nas portas UDP 1812/1813.
+                        Use a mesma grafia exata do dominio na URL do portal e em Dominios permitidos (<span className="text-foreground">portal.centernet.inf.br</span>), e prefira https. O AP precisa alcancar a VPS nas portas UDP 1812/1813.
                       </p>
                     </div>
                   </div>
