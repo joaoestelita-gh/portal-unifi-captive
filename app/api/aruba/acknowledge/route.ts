@@ -11,28 +11,31 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 const ACK_TOKEN = 'Aruba.InstantOn.Acknowledge'
 
+// Test variant: return the token wrapped in a minimal HTML document.
+const ACK_HTML = `<html>
+<body>
+${ACK_TOKEN}
+</body>
+</html>`
+
 export async function GET(_req: NextRequest) {
-  // CRITICAL: In the Aruba "Authentication Text" acknowledgement flow, the AP
-  // inspects the response body and only grants access when it contains the
-  // token and NOTHING that turns the page into a normal document to render.
-  // If the token shows up as visible text on the captive browser (as seen in
-  // testing), it means the AP did NOT consume it — usually because the body
-  // had surrounding HTML. So we return the bare token only, as plain text.
-  return new NextResponse(ACK_TOKEN, {
+  // TEST: wrap the token in a minimal HTML body. Some AP firmware looks for the
+  // token inside the rendered page body rather than as a bare text response.
+  return new NextResponse(ACK_HTML, {
     status: 200,
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-store, no-cache, must-revalidate',
     },
   })
 }
 
-// Some AP firmware probes the acknowledgement via POST. Return the bare token.
+// Some AP firmware probes the acknowledgement via POST. Return the same HTML.
 export async function POST() {
-  return new NextResponse(ACK_TOKEN, {
+  return new NextResponse(ACK_HTML, {
     status: 200,
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-store, no-cache, must-revalidate',
     },
   })
