@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
-import { getPortalLogs, clearPortalLogs } from '@/lib/portal-logs'
+import { getPortalLogs, clearOldPortalLogs } from '@/lib/portal-logs'
 
 export async function GET() {
-  return NextResponse.json({ logs: getPortalLogs() })
+  const logs = await getPortalLogs()
+  return NextResponse.json({ logs })
 }
 
 export async function DELETE() {
-  clearPortalLogs()
+  // Clear logs older than 0 days (i.e. all logs)
+  await clearOldPortalLogs(0)
   return NextResponse.json({ success: true })
 }

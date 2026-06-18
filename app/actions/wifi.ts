@@ -7,16 +7,9 @@ import { nanoid } from 'nanoid'
 import { getUnifiClient } from '@/lib/unifi'
 import { getArubaClient, type ArubaRedirectParams, type ArubaAuthCredentials } from '@/lib/aruba'
 import { createRadiusToken } from '@/lib/radius'
+import { hashPassword, verifyPassword } from '@/lib/auth'
+import { checkRateLimit, recordFailedAttempt, clearRateLimit } from '@/lib/rate-limit'
 import { revalidatePath } from 'next/cache'
-import bcrypt from 'bcryptjs'
-
-async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10)
-}
-
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash)
-}
 
 // Fetch available UniFi sites
 export async function fetchUnifiSites(url: string, username: string, password: string) {
@@ -288,8 +281,12 @@ async function unauthorizeOnController(macAddress: string): Promise<boolean> {
   return true
 }
 
-// Portal Settings
-export async function getPortalSettings() {
+// Portal Settings — cached in memory with a short TTL to avoid repeated DB queries.
+// The cache is automatically invalidated when settings are updated.
+let settingsCache: { data: Awaited<ReturnType<typeof getPortalSettingsFromDb>>; expiresAt: number } | null = null
+const SETTINGS_CACHE_TTL_MS = 30 * 1000 // 30 seconds
+
+async function getPortalSettingsFromDb() {
   const settings = await db.select().from(portalSettings).where(eq(portalSettings.id, 'default'))
   if (settings.length === 0) {
     // Create default settings
@@ -323,8 +320,25 @@ export async function getPortalSettings() {
   return settings[0]
 }
 
+export async function getPortalSettings() {
+  const now = Date.now()
+  if (settingsCache && now < settingsCache.expiresAt) {
+    return settingsCache.data
+  }
+
+  const data = await getPortalSettingsFromDb()
+  settingsCache = { data, expiresAt: now + SETTINGS_CACHE_TTL_MS }
+  return data
+}
+
+/** Invalidate the settings cache (called after updates). */
+function invalidateSettingsCache() {
+  settingsCache = null
+}
+
 export async function updatePortalSettings(data: Partial<typeof portalSettings.$inferInsert>) {
   await db.update(portalSettings).set({ ...data, updatedAt: new Date() }).where(eq(portalSettings.id, 'default'))
+  invalidateSettingsCache()
   revalidatePath('/admin')
 }
 
@@ -354,6 +368,7 @@ export async function updateControllerSettings(data: {
     arubaClientSecret: data.arubaClientSecret,
     updatedAt: new Date()
   }).where(eq(portalSettings.id, 'default'))
+  invalidateSettingsCache()
   revalidatePath('/admin')
   return { success: true }
 }
@@ -422,6 +437,7 @@ export async function updateUnifiSettings(data: {
     unifiSite: data.unifiSite,
     updatedAt: new Date() 
   }).where(eq(portalSettings.id, 'default'))
+  invalidateSettingsCache()
   revalidatePath('/admin')
   return { success: true }
 }
@@ -569,9 +585,17 @@ export async function checkActiveSession(macAddress: string, detectedController?
 
 // WiFi User Login
 export async function loginWifiUser(email: string, password: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
+  // Rate limit check by email
+  const rateLimitKey = `wifi-login:${email.toLowerCase()}`
+  const rateCheck = checkRateLimit(rateLimitKey)
+  if (rateCheck.limited) {
+    return { success: false, error: `Muitas tentativas. Tente novamente em ${Math.ceil((rateCheck.retryAfterSeconds || 900) / 60)} minutos.` }
+  }
+
   const users = await db.select().from(wifiUsers).where(eq(wifiUsers.email, email))
   
   if (users.length === 0) {
+    recordFailedAttempt(rateLimitKey)
     return { success: false, error: 'Usuário não encontrado' }
   }
 
@@ -579,6 +603,7 @@ export async function loginWifiUser(email: string, password: string, macAddress:
   const validPassword = await verifyPassword(password, user.password)
   
   if (!validPassword) {
+    recordFailedAttempt(rateLimitKey)
     return { success: false, error: 'Senha incorreta' }
   }
 
@@ -681,6 +706,9 @@ export async function loginWifiUser(email: string, password: string, macAddress:
     createdAt: new Date(),
   })
 
+  // Login successful, clear rate limit
+  clearRateLimit(rateLimitKey)
+
   return { 
     success: true, 
     sessionId,
@@ -692,9 +720,17 @@ export async function loginWifiUser(email: string, password: string, macAddress:
 
 // Voucher Login
 export async function loginWithVoucher(code: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
+  // Rate limit check by MAC or code
+  const rateLimitKey = `voucher-login:${macAddress || code}`
+  const rateCheck = checkRateLimit(rateLimitKey)
+  if (rateCheck.limited) {
+    return { success: false, error: `Muitas tentativas. Tente novamente em ${Math.ceil((rateCheck.retryAfterSeconds || 900) / 60)} minutos.` }
+  }
+
   const vouchers = await db.select().from(wifiVouchers).where(eq(wifiVouchers.code, code.toUpperCase()))
   
   if (vouchers.length === 0) {
+    recordFailedAttempt(rateLimitKey)
     return { success: false, error: 'Codigo invalido' }
   }
 

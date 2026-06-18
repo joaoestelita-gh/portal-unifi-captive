@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog'
 import { registerWifiUser, loginWifiUser, loginWithVoucher } from '@/app/actions/wifi'
 import type { ArubaRedirectParams } from '@/lib/aruba'
 
@@ -48,6 +49,9 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
   
   // Voucher form
   const [voucherCode, setVoucherCode] = useState('')
+
+  // Terms modal
+  const [termsOpen, setTermsOpen] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -389,12 +393,29 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
               <button 
                 type="button"
                 className="underline hover:text-slate-700"
-                onClick={() => alert(settings.termsText)}
+                onClick={() => setTermsOpen(true)}
               >
                 termos de uso
               </button>
             </p>
           )}
+
+          {/* Terms of Use Modal */}
+          <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Termos de Uso</DialogTitle>
+                <DialogDescription className="whitespace-pre-wrap text-sm text-slate-600 mt-4">
+                  {settings.termsText}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogClose asChild>
+                <Button className="w-full mt-4" variant="outline">
+                  Fechar
+                </Button>
+              </DialogClose>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>

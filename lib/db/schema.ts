@@ -150,3 +150,18 @@ export const portalSettings = pgTable('portal_settings', {
   arubaClientSecret: text('arubaClientSecret'),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
+
+
+// --- Portal Access Logs ---------------------------------------------------
+// Persisted in the database instead of in-memory to survive restarts/deploys.
+export const portalAccessLogs = pgTable('portal_access_logs', {
+  id: text('id').primaryKey(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  controller: text('controller').notNull(), // 'unifi' | 'aruba' | 'direct'
+  mac: text('mac'),
+  ip: text('ip'),
+  ssid: text('ssid'),
+  apName: text('apName'),
+  params: text('params'), // JSON stringified original params
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})

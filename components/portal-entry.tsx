@@ -58,7 +58,7 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
 
   // Log portal access for debugging (only if there are params)
   if (Object.values(params).some((v) => v)) {
-    addPortalLog({
+    await addPortalLog({
       timestamp: new Date().toISOString(),
       controller,
       mac: macAddress || null,
