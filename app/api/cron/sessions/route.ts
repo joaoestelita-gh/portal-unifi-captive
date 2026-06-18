@@ -4,6 +4,7 @@ import { wifiUsers, wifiSessions } from '@/lib/db/schema'
 import { eq, lt, and, sql } from 'drizzle-orm'
 import { getUnifiClient } from '@/lib/unifi'
 import { getArubaClient } from '@/lib/aruba'
+import { cleanupRadiusTokens, cleanupOldLogs } from '@/lib/cleanup'
 
 // Helper to get controller settings
 async function getControllerSettings() {
@@ -83,6 +84,8 @@ export async function GET(request: Request) {
   const results = {
     expiredSessions: 0,
     resetUsers: 0,
+    deletedTokens: 0,
+    deletedLogs: 0,
     errors: [] as string[],
   }
 
@@ -153,9 +156,23 @@ export async function GET(request: Request) {
       }
     }
 
+    // 3. Cleanup expired/used RADIUS tokens
+    try {
+      results.deletedTokens = await cleanupRadiusTokens()
+    } catch (error) {
+      results.errors.push(`Failed to cleanup RADIUS tokens: ${error}`)
+    }
+
+    // 4. Cleanup old portal access logs (older than 30 days)
+    try {
+      results.deletedLogs = await cleanupOldLogs(30)
+    } catch (error) {
+      results.errors.push(`Failed to cleanup old logs: ${error}`)
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Processed ${results.expiredSessions} expired sessions, reset ${results.resetUsers} users`,
+      message: `Processed ${results.expiredSessions} expired sessions, reset ${results.resetUsers} users, cleaned ${results.deletedTokens} tokens, deleted ${results.deletedLogs} old logs`,
       ...results,
     })
   } catch (error) {

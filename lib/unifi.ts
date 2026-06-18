@@ -265,8 +265,9 @@ class UnifiController {
   }
 }
 
-// Singleton instance
-let unifiClient: UnifiController | null = null
+// Singleton instance removed — in serverless environments (Vercel) a shared
+// instance can leak session cookies between unrelated requests. Each call now
+// creates a fresh controller instance.
 
 interface GetUnifiClientOptions {
   controllerUrl?: string
@@ -276,7 +277,7 @@ interface GetUnifiClientOptions {
 }
 
 export function getUnifiClient(options?: GetUnifiClientOptions): UnifiController {
-  // If options provided, create new client with those settings
+  // If options provided, create client with those settings
   if (options?.controllerUrl && options?.username && options?.password) {
     return new UnifiController({
       baseUrl: options.controllerUrl,
@@ -286,17 +287,14 @@ export function getUnifiClient(options?: GetUnifiClientOptions): UnifiController
     })
   }
   
-  // Otherwise use singleton with env vars
-  if (!unifiClient) {
-    const config: UnifiConfig = {
-      baseUrl: process.env.UNIFI_CONTROLLER_URL || 'https://192.168.1.1',
-      username: process.env.UNIFI_USERNAME || 'admin',
-      password: process.env.UNIFI_PASSWORD || '',
-      site: process.env.UNIFI_SITE || 'default',
-    }
-    unifiClient = new UnifiController(config)
+  // Fall back to environment variables
+  const config: UnifiConfig = {
+    baseUrl: process.env.UNIFI_CONTROLLER_URL || 'https://192.168.1.1',
+    username: process.env.UNIFI_USERNAME || 'admin',
+    password: process.env.UNIFI_PASSWORD || '',
+    site: process.env.UNIFI_SITE || 'default',
   }
-  return unifiClient
+  return new UnifiController(config)
 }
 
 export type { UnifiClient, UnifiConfig, UnifiSite, UnifiDevice, UnifiSiteHealth }

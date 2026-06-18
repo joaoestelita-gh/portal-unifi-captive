@@ -34,9 +34,9 @@ export default async function AdminPage() {
   return (
     <AdminDashboard 
       stats={stats}
-      users={users}
-      sessions={sessions}
-      vouchers={vouchers}
+      users={users.items}
+      sessions={sessions.items}
+      vouchers={vouchers.items}
       pendingUsers={pendingUsers}
       settings={settings}
       adminName={session.user.name || 'Admin'}
