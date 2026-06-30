@@ -281,7 +281,7 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
       defaultSpeedUp: defaultSpeedUpUnlimited ? 0 : parseInt(defaultSpeedUp),
       requireApproval,
     })
-    alert('Configuracoes salvas com sucesso!')
+    alert('Configurações salvas com sucesso!')
   }
 
   const loadAdmins = async () => {
@@ -301,7 +301,7 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
     }
     
     if (newAdminPassword.length < 6) {
-      setAdminError('A senha deve ter no minimo 6 caracteres')
+      setAdminError('A senha deve ter no mínimo 6 caracteres')
       return
     }
     
@@ -347,12 +347,12 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
     setEditAdminError('')
     
     if (!editAdminName || !editAdminEmail) {
-      setEditAdminError('Nome e email sao obrigatorios')
+      setEditAdminError('Nome e email são obrigatórios')
       return
     }
     
     if (editAdminPassword && editAdminPassword.length < 6) {
-      setEditAdminError('A senha deve ter no minimo 6 caracteres')
+      setEditAdminError('A senha deve ter no mínimo 6 caracteres')
       return
     }
     
@@ -380,12 +380,12 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
     }
     
     if (newPassword.length < 6) {
-      setPasswordError('A nova senha deve ter no minimo 6 caracteres')
+      setPasswordError('A nova senha deve ter no mínimo 6 caracteres')
       return
     }
     
     if (newPassword !== confirmPassword) {
-      setPasswordError('As senhas nao coincidem')
+      setPasswordError('As senhas não coincidem')
       return
     }
     
@@ -410,12 +410,12 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
     setWifiUserSuccess('')
     
     if (!newWifiUserName || !newWifiUserEmail || !newWifiUserPassword) {
-      setWifiUserError('Nome, email e senha sao obrigatorios')
+      setWifiUserError('Nome, email e senha são obrigatórios')
       return
     }
     
     if (newWifiUserPassword.length < 6) {
-      setWifiUserError('A senha deve ter no minimo 6 caracteres')
+      setWifiUserError('A senha deve ter no mínimo 6 caracteres')
       return
     }
     
@@ -432,7 +432,7 @@ const result = await createWifiUserByAdmin({
     if (result.error) {
       setWifiUserError(result.error)
     } else {
-      setWifiUserSuccess(`Usuario ${newWifiUserName} cadastrado com sucesso!`)
+      setWifiUserSuccess(`Usuário ${newWifiUserName} cadastrado com sucesso!`)
       setNewWifiUserName('')
       setNewWifiUserEmail('')
       setNewWifiUserPhone('')
@@ -464,7 +464,7 @@ window.location.reload()
     setEditUserError('')
     
     if (!editUserName || !editUserEmail) {
-      setEditUserError('Nome e email sao obrigatorios')
+      setEditUserError('Nome e email são obrigatórios')
       return
     }
     
@@ -482,7 +482,7 @@ const result = await updateWifiUser(editingUser.id, {
       setEditingUser(null)
       window.location.reload()
     } else {
-      setEditUserError('Erro ao atualizar usuario')
+      setEditUserError('Erro ao atualizar usuário')
     }
   }
   
@@ -545,7 +545,7 @@ const result = await updateWifiUser(editingUser.id, {
             }`}
           >
             <TrendingUp className="w-5 h-5" />
-            Visao Geral
+            Visão Geral
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -556,7 +556,7 @@ const result = await updateWifiUser(editingUser.id, {
             }`}
           >
             <Users className="w-5 h-5" />
-            Usuarios
+            Usuários
           </button>
           <button
             onClick={() => setActiveTab('sessions')}
@@ -567,7 +567,7 @@ const result = await updateWifiUser(editingUser.id, {
             }`}
           >
             <Wifi className="w-5 h-5" />
-            Sessoes
+            Sessões
           </button>
           <button
             onClick={() => setActiveTab('vouchers')}
@@ -600,7 +600,7 @@ const result = await updateWifiUser(editingUser.id, {
             }`}
           >
             <Settings className="w-5 h-5" />
-            Configuracoes
+            Configurações
           </button>
           <button
             onClick={() => setActiveTab('integration')}
@@ -670,7 +670,7 @@ const result = await updateWifiUser(editingUser.id, {
                 onCheckedChange={setAutoRefresh}
               />
               <Label htmlFor="auto-refresh" className="text-sm text-muted-foreground cursor-pointer">
-                Atualizacao automatica
+                Atualização automática
               </Label>
             </div>
             <Button
@@ -690,7 +690,7 @@ const result = await updateWifiUser(editingUser.id, {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
             {
-              label: 'Total de Usuarios',
+              label: 'Total de Usuários',
               value: stats.totalUsers,
               caption: 'cadastrados',
               captionClass: 'text-muted-foreground',
@@ -703,7 +703,7 @@ const result = await updateWifiUser(editingUser.id, {
             {
               label: 'Pendentes',
               value: stats.pendingUsers,
-              caption: 'aguardando aprovacao',
+              caption: 'aguardando aprovação',
               captionClass: 'text-amber-400',
               Icon: Clock,
               accent: 'text-amber-500',
@@ -712,7 +712,7 @@ const result = await updateWifiUser(editingUser.id, {
               hover: 'hover:border-amber-500/50 hover:shadow-amber-500/10',
             },
             {
-              label: 'Sessoes Ativas',
+              label: 'Sessões Ativas',
               value: stats.activeSessions,
               caption: 'conectados agora',
               captionClass: 'text-emerald-400',
@@ -725,7 +725,7 @@ const result = await updateWifiUser(editingUser.id, {
             {
               label: 'Vouchers Ativos',
               value: stats.activeVouchers,
-              caption: 'disponiveis',
+              caption: 'disponíveis',
               captionClass: 'text-sky-400',
               Icon: Ticket,
               accent: 'text-sky-500',
@@ -768,9 +768,9 @@ const result = await updateWifiUser(editingUser.id, {
                     <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
                       <Clock className="w-4 h-4 text-amber-500" />
                     </div>
-                    Aguardando Aprovacao
+                    Aguardando Aprovação
                   </CardTitle>
-                  <CardDescription>Usuarios que precisam de aprovacao</CardDescription>
+                  <CardDescription>Usuários que precisam de aprovação</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {pendingUsers.length === 0 ? (
@@ -778,7 +778,7 @@ const result = await updateWifiUser(editingUser.id, {
                       <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
                         <CheckCircle className="w-6 h-6 text-muted-foreground" />
                       </div>
-                      <p className="text-sm text-muted-foreground">Nenhum usuario pendente</p>
+                      <p className="text-sm text-muted-foreground">Nenhum usuário pendente</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -827,9 +827,9 @@ const result = await updateWifiUser(editingUser.id, {
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                       <Wifi className="w-4 h-4 text-emerald-500" />
                     </div>
-                    Sessoes Ativas
+                    Sessões Ativas
                   </CardTitle>
-                  <CardDescription>Usuarios conectados agora</CardDescription>
+                  <CardDescription>Usuários conectados agora</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {sessions.length === 0 ? (
@@ -837,7 +837,7 @@ const result = await updateWifiUser(editingUser.id, {
                       <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-3">
                         <Wifi className="w-6 h-6 text-muted-foreground" />
                       </div>
-                      <p className="text-sm text-muted-foreground">Nenhuma sessao ativa</p>
+                      <p className="text-sm text-muted-foreground">Nenhuma sessão ativa</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -883,9 +883,9 @@ const result = await updateWifiUser(editingUser.id, {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Plus className="w-5 h-5 text-accent" />
-                    Cadastrar Usuario WiFi
+                    Cadastrar Usuário WiFi
                   </CardTitle>
-                  <CardDescription>Cadastre um novo usuario para acessar a rede WiFi</CardDescription>
+                  <CardDescription>Cadastre um novo usuário para acessar a rede WiFi</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {wifiUserError && (
@@ -932,7 +932,7 @@ const result = await updateWifiUser(editingUser.id, {
                       <div className="relative">
                         <Input
                           type={showWifiUserPassword ? "text" : "password"}
-                          placeholder="Minimo 6 caracteres"
+                          placeholder="Mínimo 6 caracteres"
                           value={newWifiUserPassword}
                           onChange={(e) => setNewWifiUserPassword(e.target.value)}
                           className="bg-secondary/50 border-border/50 pr-10"
@@ -955,12 +955,12 @@ const result = await updateWifiUser(editingUser.id, {
                         className="bg-secondary/50 border-border/50"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Se informado, o dispositivo sera vinculado a este usuario
+                        Se informado, o dispositivo será vinculado a este usuário
                       </p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-muted-foreground">Limite Diario (min)</Label>
+                        <Label className="text-muted-foreground">Limite Diário (min)</Label>
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -982,7 +982,7 @@ const result = await updateWifiUser(editingUser.id, {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-muted-foreground">Limite por Sessao (min)</Label>
+                        <Label className="text-muted-foreground">Limite por Sessão (min)</Label>
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -1006,7 +1006,7 @@ const result = await updateWifiUser(editingUser.id, {
                   <div className="flex gap-2 pt-2">
                     <Button onClick={handleCreateWifiUser} className="bg-accent hover:bg-accent/90">
                       <Plus className="w-4 h-4 mr-2" />
-                      Cadastrar Usuario
+                      Cadastrar Usuário
                     </Button>
                     <Button variant="outline" onClick={() => setShowCreateUserForm(false)}>
                       Cancelar
@@ -1022,14 +1022,14 @@ const result = await updateWifiUser(editingUser.id, {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="w-5 h-5 text-primary" />
-                      Gerenciar Usuarios
+                      Gerenciar Usuários
                     </CardTitle>
-                    <CardDescription>Lista de todos os usuarios cadastrados no portal</CardDescription>
+                    <CardDescription>Lista de todos os usuários cadastrados no portal</CardDescription>
                   </div>
                   {!showCreateUserForm && (
                     <Button onClick={() => setShowCreateUserForm(true)} className="bg-accent hover:bg-accent/90">
                       <Plus className="w-4 h-4 mr-2" />
-                      Novo Usuario
+                      Novo Usuário
                     </Button>
                   )}
                 </div>
@@ -1039,18 +1039,18 @@ const result = await updateWifiUser(editingUser.id, {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/30">
-                        <TableHead className="text-muted-foreground font-medium">Usuario</TableHead>
+                        <TableHead className="text-muted-foreground font-medium">Usuário</TableHead>
                         <TableHead className="text-muted-foreground font-medium">Status</TableHead>
-                        <TableHead className="text-muted-foreground font-medium">Limite Diario</TableHead>
+                        <TableHead className="text-muted-foreground font-medium">Limite Diário</TableHead>
                         <TableHead className="text-muted-foreground font-medium">Usado Hoje</TableHead>
-                        <TableHead className="text-muted-foreground font-medium text-right">Acoes</TableHead>
+                        <TableHead className="text-muted-foreground font-medium text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {users.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                            Nenhum usuario cadastrado
+                            Nenhum usuário cadastrado
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1138,9 +1138,9 @@ const result = await updateWifiUser(editingUser.id, {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Pencil className="w-5 h-5 text-primary" />
-                      Editar Usuario
+                      Editar Usuário
                     </CardTitle>
-                    <CardDescription>Altere os dados do usuario {editingUser.name}</CardDescription>
+                    <CardDescription>Altere os dados do usuário {editingUser.name}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {editUserError && (
@@ -1207,7 +1207,7 @@ const result = await updateWifiUser(editingUser.id, {
                       </div>
 <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-muted-foreground">Limite Diario (min)</Label>
+                        <Label className="text-muted-foreground">Limite Diário (min)</Label>
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -1229,7 +1229,7 @@ const result = await updateWifiUser(editingUser.id, {
                     </div>
                     <div className="space-y-2 md:col-span-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-muted-foreground">Limite por Sessao (min)</Label>
+                        <Label className="text-muted-foreground">Limite por Sessão (min)</Label>
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -1271,7 +1271,7 @@ const result = await updateWifiUser(editingUser.id, {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wifi className="w-5 h-5 text-emerald-500" />
-                  Sessoes de Conexao
+                  Sessões de Conexão
                 </CardTitle>
                 <CardDescription>Monitore as conexoes ativas</CardDescription>
               </CardHeader>
@@ -1280,18 +1280,18 @@ const result = await updateWifiUser(editingUser.id, {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/30">
-                        <TableHead className="text-muted-foreground font-medium">Usuario</TableHead>
+                        <TableHead className="text-muted-foreground font-medium">Usuário</TableHead>
                         <TableHead className="text-muted-foreground font-medium">MAC Address</TableHead>
                         <TableHead className="text-muted-foreground font-medium">IP</TableHead>
                         <TableHead className="text-muted-foreground font-medium">Tempo</TableHead>
-                        <TableHead className="text-muted-foreground font-medium text-right">Acoes</TableHead>
+                        <TableHead className="text-muted-foreground font-medium text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sessions.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                            Nenhuma sessao ativa
+                            Nenhuma sessão ativa
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1357,7 +1357,7 @@ const result = await updateWifiUser(editingUser.id, {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground">Duracao (minutos)</Label>
+                    <Label className="text-muted-foreground">Duração (minutos)</Label>
                     <Input
                       type="number"
                       value={voucherDuration}
@@ -1373,7 +1373,7 @@ const result = await updateWifiUser(editingUser.id, {
                   {generatedCodes.length > 0 && (
                     <div className="mt-4 p-4 bg-secondary/30 rounded-xl border border-border/30">
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-medium text-foreground">Codigos Gerados</p>
+                        <p className="text-sm font-medium text-foreground">Códigos Gerados</p>
                         <Button size="sm" variant="ghost" onClick={copyAllCodes} className="text-muted-foreground hover:text-foreground">
                           <Copy className="w-3 h-3 mr-1" />
                           Copiar todos
@@ -1407,10 +1407,10 @@ const result = await updateWifiUser(editingUser.id, {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/30">
-                          <TableHead className="text-muted-foreground font-medium">Codigo</TableHead>
-                          <TableHead className="text-muted-foreground font-medium">Duracao</TableHead>
+                          <TableHead className="text-muted-foreground font-medium">Código</TableHead>
+                          <TableHead className="text-muted-foreground font-medium">Duração</TableHead>
                           <TableHead className="text-muted-foreground font-medium">Usos</TableHead>
-                          <TableHead className="text-muted-foreground font-medium text-right">Acoes</TableHead>
+                          <TableHead className="text-muted-foreground font-medium text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1508,7 +1508,7 @@ const result = await updateWifiUser(editingUser.id, {
                       type="password"
                       value={newAdminPassword}
                       onChange={(e) => setNewAdminPassword(e.target.value)}
-                      placeholder="Minimo 6 caracteres"
+                      placeholder="Mínimo 6 caracteres"
                       className="bg-secondary/50 border-border/50 focus:border-primary"
                     />
                   </div>
@@ -1549,7 +1549,7 @@ const result = await updateWifiUser(editingUser.id, {
                         <TableHead className="text-muted-foreground font-medium">Nome</TableHead>
                         <TableHead className="text-muted-foreground font-medium">Email</TableHead>
                         <TableHead className="text-muted-foreground font-medium">Data de Cadastro</TableHead>
-                        <TableHead className="text-muted-foreground font-medium text-right">Acoes</TableHead>
+                        <TableHead className="text-muted-foreground font-medium text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1680,13 +1680,13 @@ const result = await updateWifiUser(editingUser.id, {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Settings className="w-5 h-5 text-primary" />
-                    Configuracoes do Portal
+                    Configurações do Portal
                   </CardTitle>
                   <CardDescription>Personalize a aparencia do portal captivo</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground">Titulo do Portal</Label>
+                    <Label className="text-muted-foreground">Título do Portal</Label>
                     <Input
                       value={portalTitle}
                       onChange={(e) => setPortalTitle(e.target.value)}
@@ -1737,12 +1737,12 @@ const result = await updateWifiUser(editingUser.id, {
                       placeholder="https://google.com"
                       className="bg-secondary/50 border-border/50 focus:border-primary"
                     />
-                    <p className="text-xs text-muted-foreground">Pagina que o usuario vera apos conectar ao WiFi</p>
+                    <p className="text-xs text-muted-foreground">Página que o usuário verá apos conectar ao WiFi</p>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/30 border border-border/30">
                     <div>
-                      <Label className="text-foreground">Requer Aprovacao</Label>
-                      <p className="text-xs text-muted-foreground">Novos usuarios precisam ser aprovados</p>
+                      <Label className="text-foreground">Requer Aprovação</Label>
+                      <p className="text-xs text-muted-foreground">Novos usuários precisam ser aprovados</p>
                     </div>
                     <Switch
                       checked={requireApproval}
@@ -1756,15 +1756,15 @@ const result = await updateWifiUser(editingUser.id, {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-accent" />
-                    Limites Padrao
+                    Limites Padrão
                   </CardTitle>
-                  <CardDescription>Configure os limites padrao para novos usuarios</CardDescription>
+                  <CardDescription>Configure os limites padrao para novos usuários</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-muted-foreground">Sessao (min)</Label>
+                        <Label className="text-muted-foreground">Sessão (min)</Label>
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -1785,7 +1785,7 @@ const result = await updateWifiUser(editingUser.id, {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-muted-foreground">Diario (min)</Label>
+                        <Label className="text-muted-foreground">Diário (min)</Label>
                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -1851,7 +1851,7 @@ const result = await updateWifiUser(editingUser.id, {
                   </div>
                   <Button onClick={handleSaveSettings} className="w-full bg-primary hover:bg-primary/90">
                     <Settings className="w-4 h-4 mr-2" />
-                    Salvar Configuracoes
+                    Salvar Configurações
                   </Button>
                 </CardContent>
               </Card>
