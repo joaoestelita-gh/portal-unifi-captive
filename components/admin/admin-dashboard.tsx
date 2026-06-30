@@ -768,7 +768,7 @@ const result = await updateWifiUser(editingUser.id, {
                     <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
                       <Clock className="w-4 h-4 text-amber-500" />
                     </div>
-                    Aguardando Aprovacao
+                    Aguardando Aprovação
                   </CardTitle>
                   <CardDescription>Usuários que precisam de aprovação</CardDescription>
                 </CardHeader>
@@ -1741,7 +1741,7 @@ const result = await updateWifiUser(editingUser.id, {
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/30 border border-border/30">
                     <div>
-                      <Label className="text-foreground">Requer Aprovacao</Label>
+                      <Label className="text-foreground">Requer Aprovação</Label>
                       <p className="text-xs text-muted-foreground">Novos usuários precisam ser aprovados</p>
                     </div>
                     <Switch
