@@ -513,12 +513,18 @@ const result = await updateWifiUser(editingUser.id, {
 
   return (
     <div className="min-h-screen bg-background font-sans flex">
+      {/* Decorative ambient glow */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-20 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute top-1/3 right-0 h-96 w-96 rounded-full bg-accent/5 blur-3xl" />
+      </div>
+
       {/* Sidebar */}
-      <aside className="w-64 bg-card/50 border-r border-border/50 flex flex-col fixed h-screen">
+      <aside className="w-64 bg-card/60 backdrop-blur-xl border-r border-border/50 flex flex-col fixed h-screen z-10">
         {/* Logo */}
         <div className="p-6 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/25 ring-1 ring-white/10">
               <Wifi className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -640,18 +646,24 @@ const result = await updateWifiUser(editingUser.id, {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 ml-64 p-8 relative z-10">
         {/* Header / Refresh bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-xl font-semibold text-foreground tracking-tight">Painel de Controle</h2>
-            <p className="text-sm text-muted-foreground">
-              {'Atualizado as '}
-              {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
+            <h2 className="text-2xl font-semibold text-foreground tracking-tight text-balance">Painel de Controle</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <p className="text-sm text-muted-foreground">
+                {'Atualizado as '}
+                {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card/50 px-3 py-2">
               <Switch
                 id="auto-refresh"
                 checked={autoRefresh}
@@ -666,7 +678,7 @@ const result = await updateWifiUser(editingUser.id, {
               size="sm"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="gap-2 bg-transparent"
+              className="gap-2 bg-card/50"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Atualizar
@@ -676,65 +688,71 @@ const result = await updateWifiUser(editingUser.id, {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Total de Usuarios</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{stats.totalUsers}</p>
-                  <p className="text-xs text-muted-foreground mt-1">cadastrados</p>
+          {[
+            {
+              label: 'Total de Usuarios',
+              value: stats.totalUsers,
+              caption: 'cadastrados',
+              captionClass: 'text-muted-foreground',
+              Icon: Users,
+              accent: 'text-primary',
+              iconBg: 'from-primary/20 to-primary/5',
+              bar: 'bg-primary',
+              hover: 'hover:border-primary/50 hover:shadow-primary/10',
+            },
+            {
+              label: 'Pendentes',
+              value: stats.pendingUsers,
+              caption: 'aguardando aprovacao',
+              captionClass: 'text-amber-400',
+              Icon: Clock,
+              accent: 'text-amber-500',
+              iconBg: 'from-amber-500/20 to-amber-500/5',
+              bar: 'bg-amber-500',
+              hover: 'hover:border-amber-500/50 hover:shadow-amber-500/10',
+            },
+            {
+              label: 'Sessoes Ativas',
+              value: stats.activeSessions,
+              caption: 'conectados agora',
+              captionClass: 'text-emerald-400',
+              Icon: Activity,
+              accent: 'text-emerald-500',
+              iconBg: 'from-emerald-500/20 to-emerald-500/5',
+              bar: 'bg-emerald-500',
+              hover: 'hover:border-emerald-500/50 hover:shadow-emerald-500/10',
+            },
+            {
+              label: 'Vouchers Ativos',
+              value: stats.activeVouchers,
+              caption: 'disponiveis',
+              captionClass: 'text-sky-400',
+              Icon: Ticket,
+              accent: 'text-sky-500',
+              iconBg: 'from-sky-500/20 to-sky-500/5',
+              bar: 'bg-sky-500',
+              hover: 'hover:border-sky-500/50 hover:shadow-sky-500/10',
+            },
+          ].map(({ label, value, caption, captionClass, Icon, accent, iconBg, bar, hover }) => (
+            <Card
+              key={label}
+              className={`group relative overflow-hidden bg-card/50 border-border/50 transition-all duration-300 hover:shadow-xl ${hover}`}
+            >
+              <div className={`absolute inset-x-0 top-0 h-0.5 ${bar} opacity-60 group-hover:opacity-100 transition-opacity`} />
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">{label}</p>
+                    <p className="text-3xl font-bold text-foreground mt-1 tabular-nums tracking-tight">{value}</p>
+                    <p className={`text-xs mt-1 ${captionClass}`}>{caption}</p>
+                  </div>
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${iconBg} flex items-center justify-center ring-1 ring-inset ring-white/5 transition-transform duration-300 group-hover:scale-110`}>
+                    <Icon className={`w-6 h-6 ${accent}`} />
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 border-border/50 hover:border-amber-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Pendentes</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{stats.pendingUsers}</p>
-                  <p className="text-xs text-amber-400 mt-1">aguardando aprovacao</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-amber-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 border-border/50 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Sessoes Ativas</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{stats.activeSessions}</p>
-                  <p className="text-xs text-emerald-400 mt-1">conectados agora</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-emerald-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 border-border/50 hover:border-violet-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/5">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Vouchers Ativos</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{stats.activeVouchers}</p>
-                  <p className="text-xs text-violet-400 mt-1">disponiveis</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                  <Ticket className="w-6 h-6 text-violet-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Main Tabs */}
