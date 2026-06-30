@@ -143,9 +143,9 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
         arubaClientId,
         arubaClientSecret,
       })
-      setTestResult({ success: true, message: 'Configuracoes salvas com sucesso!' })
+      setTestResult({ success: true, message: 'Configurações salvas com sucesso!' })
     } catch {
-      setTestResult({ success: false, message: 'Erro ao salvar configuracoes' })
+      setTestResult({ success: false, message: 'Erro ao salvar configurações' })
     }
     setSaving(false)
   }
@@ -157,19 +157,19 @@ const handleTest = async () => {
       await handleSave()
       const result = await testControllerConnection(controllerType)
       if (result.success) {
-        setTestResult({ success: true, message: result.message || 'Conexao estabelecida!' })
+        setTestResult({ success: true, message: result.message || 'Conexão estabelecida!' })
       } else {
-        setTestResult({ success: false, message: result.error || 'Falha na conexao' })
+        setTestResult({ success: false, message: result.error || 'Falha na conexão' })
       }
     } catch {
-      setTestResult({ success: false, message: 'Erro ao testar conexao' })
+      setTestResult({ success: false, message: 'Erro ao testar conexão' })
     }
     setTesting(false)
   }
 
   const handleFetchSites = async () => {
     if (!unifiUrl || !unifiUsername || !unifiPassword) {
-      setTestResult({ success: false, message: 'Preencha URL, usuario e senha primeiro' })
+      setTestResult({ success: false, message: 'Preencha URL, usuário e senha primeiro' })
       return
     }
     
@@ -208,12 +208,12 @@ setLoadingSites(false)
       const result = await fetchUnifiSiteInfo(unifiUrl, unifiUsername, unifiPassword, unifiSite)
       if (result.success && result.info) {
         setSiteInfo(result.info)
-        setTestResult({ success: true, message: 'Informacoes carregadas!' })
+        setTestResult({ success: true, message: 'Informações carregadas!' })
       } else {
-        setTestResult({ success: false, message: result.error || 'Erro ao buscar informacoes' })
+        setTestResult({ success: false, message: result.error || 'Erro ao buscar informações' })
       }
     } catch {
-      setTestResult({ success: false, message: 'Erro ao buscar informacoes' })
+      setTestResult({ success: false, message: 'Erro ao buscar informações' })
     }
     
     setLoadingInfo(false)
@@ -269,7 +269,7 @@ setLoadingSites(false)
             Tipo de Controladora
           </CardTitle>
           <CardDescription>
-            Selecione o tipo de controladora WiFi que voce utiliza
+            Selecione o tipo de controladora WiFi que você utiliza
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -283,7 +283,7 @@ setLoadingSites(false)
               }`}
             >
               <div className="font-medium text-foreground">Nenhuma</div>
-              <div className="text-xs text-muted-foreground mt-1">Autorizacao manual</div>
+              <div className="text-xs text-muted-foreground mt-1">Autorização manual</div>
             </button>
             <button
               onClick={() => setControllerType('unifi')}
@@ -334,17 +334,17 @@ setLoadingSites(false)
         </div>
       )}
 
-      {/* Configuracoes UniFi */}
+      {/* Configurações UniFi */}
       {(controllerType === 'unifi' || controllerType === 'both') && (
         <>
           <Card className="bg-card/50 border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-foreground">
                 <Shield className="w-5 h-5 text-blue-400" />
-                Configuracoes UniFi Controller
+                Configurações UniFi Controller
               </CardTitle>
               <CardDescription>
-                Dados de acesso ao seu UniFi Controller para autorizacao automatica
+                Dados de acesso ao seu UniFi Controller para autorização automática
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -360,7 +360,7 @@ setLoadingSites(false)
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Usuario</Label>
+                  <Label className="text-muted-foreground">Usuário</Label>
                   <Input
                     placeholder="admin"
                     value={unifiUsername}
@@ -428,7 +428,7 @@ setLoadingSites(false)
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Clique em &quot;Buscar Sites&quot; para listar os dispositivos disponiveis
+                    Clique em &quot;Buscar Sites&quot; para listar os dispositivos disponíveis
                   </p>
                 </div>
               </div>
@@ -448,7 +448,7 @@ setLoadingSites(false)
                   variant="outline"
                 >
                   {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wifi className="w-4 h-4 mr-2" />}
-                  Testar Conexao
+                  Testar Conexão
                 </Button>
                 <Button 
                   onClick={handleFetchSiteInfo} 
@@ -462,13 +462,13 @@ setLoadingSites(false)
             </CardContent>
           </Card>
 
-          {/* Informacoes do Cloud Gateway */}
+          {/* Informações do Cloud Gateway */}
           {siteInfo && (
             <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   <Router className="w-5 h-5 text-green-400" />
-                  Informacoes do Cloud Gateway
+                  Informações do Cloud Gateway
                 </CardTitle>
                 <CardDescription>
                   Site: {siteInfo.siteName}
@@ -681,7 +681,7 @@ setLoadingSites(false)
         </>
       )}
 
-      {/* Configuracoes HP Aruba Instant On */}
+      {/* Configurações HP Aruba Instant On */}
       {(controllerType === 'aruba' || controllerType === 'both') && (
         <>
           {/* Instrucoes HP Aruba - Principal */}
@@ -696,26 +696,26 @@ setLoadingSites(false)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Autenticacao Aruba via RADIUS (unico modo suportado) */}
+              {/* Autenticação Aruba via RADIUS (unico modo suportado) */}
               <div className="p-4 bg-background/50 rounded-lg border border-green-500/30 space-y-3">
                 <div>
-                  <h4 className="font-medium text-foreground">Autenticacao via RADIUS</h4>
+                  <h4 className="font-medium text-foreground">Autenticação via RADIUS</h4>
                   <p className="text-sm text-muted-foreground">
-                    Este portal autentica os convidados do Aruba Instant On exclusivamente por um servidor RADIUS externo (FreeRADIUS). No AP, use &quot;Autenticacao de Convidado (padrao)&quot; e aponte o servidor RADIUS para a sua VPS.
+                    Este portal autentica os convidados do Aruba Instant On exclusivamente por um servidor RADIUS externo (FreeRADIUS). No AP, use &quot;Autenticação de Convidado (padrão)&quot; e aponte o servidor RADIUS para a sua VPS.
                   </p>
                 </div>
 
                 <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg">
                   <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <span className="text-xs text-foreground">
-                    O FreeRADIUS precisa estar instalado e configurado na sua VPS (veja docs/INSTALACAO-FREERADIUS.md). O modo &quot;Confirmacao do Portal de Convidados&quot; nao e suportado.
+                    O FreeRADIUS precisa estar instalado e configurado na sua VPS (veja docs/INSTALACAO-FREERADIUS.md). O modo &quot;Confirmação do Portal de Convidados&quot; não é suportado.
                   </span>
                 </div>
 
                 {/* O que configurar na tela do Aruba */}
                 <div className="p-3 rounded-lg border border-border bg-background/50 space-y-3">
                   <p className="text-xs font-medium text-foreground">
-                    Na tela do Aruba (Portal do convidado &rarr; Autenticacao):
+                    Na tela do Aruba (Portal do convidado &rarr; Autenticação):
                   </p>
 
                   <div>
@@ -745,7 +745,7 @@ setLoadingSites(false)
                     </p>
                     <ul className="space-y-1">
                       {[
-                        ['Servidor / Endereco IP', 'IP publico da sua VPS (onde roda o FreeRADIUS)'],
+                        ['Servidor / Endereço IP', 'IP público da sua VPS (onde roda o FreeRADIUS)'],
                         ['Porta de autenticacao', '1812'],
                         ['Porta de accounting', '1813'],
                         ['Segredo compartilhado', 'mesmo Shared Secret do clients.conf'],
@@ -768,7 +768,7 @@ setLoadingSites(false)
 
               <div className="p-4 bg-background/50 rounded-lg border border-green-500/30">
                 <p className="text-sm text-muted-foreground mb-3">
-                  O Aruba Instant On nao possui API publica. A integracao funciona via <strong className="text-foreground">redirect</strong>: 
+                  O Aruba Instant On não possui API pública. A integração funciona via <strong className="text-foreground">redirect</strong>: 
                   quando o cliente conecta ao WiFi, o Aruba redireciona para nosso portal, e apos o login, 
                   redirecionamos de volta para liberar o acesso.
                 </p>
@@ -849,7 +849,7 @@ setLoadingSites(false)
                   className="bg-primary hover:bg-primary/90"
                 >
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                  Salvar Configuracao
+                  Salvar Configuração
                 </Button>
               </div>
             </CardContent>
@@ -888,10 +888,10 @@ setLoadingSites(false)
           {/* Parametros Aruba */}
           <Card className="bg-blue-500/10 border-blue-500/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-foreground">Parametros recebidos do Aruba</CardTitle>
+              <CardTitle className="text-base text-foreground">Parâmetros recebidos do Aruba</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>Quando o Aruba redireciona para o portal, envia estes parametros:</p>
+              <p>Quando o Aruba redireciona para o portal, envia estes parâmetros:</p>
               <div className="p-3 bg-background/50 rounded-lg font-mono text-xs overflow-x-auto">
                 <code className="text-cyan-400">{fullPortalUrl}?cmd=login&amp;mac=XX:XX:XX&amp;switchip=X.X.X.X</code>
               </div>
@@ -986,9 +986,9 @@ setLoadingSites(false)
         <Card className="bg-card/50 border-border/50">
           <CardContent className="py-8 text-center">
             <Server className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">Selecione um tipo de controladora acima para configurar a integracao</p>
+            <p className="text-muted-foreground">Selecione um tipo de controladora acima para configurar a integração</p>
             <p className="text-sm text-muted-foreground/70 mt-2">
-              O portal funcionara em modo manual, sem autorizacao automatica de dispositivos
+              O portal funcionara em modo manual, sem autorização automática de dispositivos
             </p>
           </CardContent>
         </Card>

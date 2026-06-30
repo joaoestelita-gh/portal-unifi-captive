@@ -9,12 +9,12 @@ import { useRouter } from 'next/navigation'
 type SectionId = 'overview' | 'aruba' | 'unifi' | 'both' | 'vouchers' | 'users'
 
 const sections: { id: SectionId; label: string; icon: typeof Wifi }[] = [
-  { id: 'overview', label: 'Visao Geral', icon: LayoutGrid },
+  { id: 'overview', label: 'Visão Geral', icon: LayoutGrid },
   { id: 'aruba', label: 'Aruba Instant On', icon: Wifi },
   { id: 'unifi', label: 'UniFi', icon: Router },
   { id: 'both', label: 'Ambas (UniFi + Aruba)', icon: Layers },
   { id: 'vouchers', label: 'Vouchers', icon: Ticket },
-  { id: 'users', label: 'Usuarios', icon: Users },
+  { id: 'users', label: 'Usuários', icon: Users },
 ]
 
 export function HelpCenter() {
@@ -121,13 +121,13 @@ function Table({ head, rows }: { head: string[]; rows: string[][] }) {
 function OverviewSection() {
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={LayoutGrid} title="Visao Geral do Sistema" subtitle="Como tudo funciona em conjunto" />
+      <SectionHeader icon={LayoutGrid} title="Visão Geral do Sistema" subtitle="Como tudo funciona em conjunto" />
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">O que e o sistema</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">O que é o sistema</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>
-            Este e um sistema de <strong className="text-foreground">portal captivo</strong> para redes WiFi de visitantes.
+            Este é um sistema de <strong className="text-foreground">portal captivo</strong> para redes WiFi de visitantes.
             Ele controla quem acessa a internet, por quanto tempo e em qual velocidade, integrando-se com
             controladoras <strong className="text-foreground">UniFi</strong> e <strong className="text-foreground">Aruba Instant On</strong>.
           </p>
@@ -142,9 +142,9 @@ function OverviewSection() {
               ['Cliente conecta no WiFi Guest', 'O dispositivo entra na rede de visitantes'],
               ['Controladora redireciona', 'UniFi ou Aruba envia o cliente para o portal'],
               ['Sistema detecta a controladora', 'Identifica automaticamente pela query string'],
-              ['Reconexao automatica', 'Se o MAC ja tem sessao ativa, libera sem novo login'],
-              ['Login / cadastro / voucher', 'Caso nao tenha sessao, o cliente se autentica'],
-              ['Autorizacao na controladora', 'O sistema libera o acesso pelo tempo definido'],
+              ['Reconexão automática', 'Se o MAC já tem sessão ativa, libera sem novo login'],
+              ['Login / cadastro / voucher', 'Caso não tenha sessão, o cliente se autentica'],
+              ['Autorização na controladora', 'O sistema libera o acesso pelo tempo definido'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
@@ -156,16 +156,16 @@ function OverviewSection() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Modulos principais</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Módulos principais</CardTitle></CardHeader>
         <CardContent>
           <Table
-            head={['Modulo', 'Funcao']}
+            head={['Módulo', 'Função']}
             rows={[
               ['Portal Captivo', 'Tela de login, cadastro e voucher para visitantes'],
-              ['Painel Admin', 'Gestao de usuarios, sessoes, vouchers e configuracoes'],
-              ['Controladoras', 'Integracao com UniFi e Aruba (ate ambas ao mesmo tempo)'],
-              ['Controle de Acesso', 'Limites de tempo, velocidade e aprovacao'],
-              ['Login Unico', 'Uma sessao ativa por usuario por vez'],
+              ['Painel Admin', 'Gestão de usuários, sessões, vouchers e configurações'],
+              ['Controladoras', 'Integração com UniFi e Aruba (até ambas ao mesmo tempo)'],
+              ['Controle de Acesso', 'Limites de tempo, velocidade e aprovação'],
+              ['Login Único', 'Uma sessão ativa por usuário por vez'],
               ['Logs de Acesso', 'Registro em tempo real dos redirecionamentos'],
             ]}
           />
@@ -179,25 +179,25 @@ function OverviewSection() {
 function ArubaSection() {
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={Wifi} title="Configuracao do Portal Captivo" subtitle="Aruba Instant On" />
+      <SectionHeader icon={Wifi} title="Configuração do Portal Captivo" subtitle="Aruba Instant On" />
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Visao Geral</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Visão Geral</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>
-            O Aruba Instant On usa o metodo <strong className="text-foreground">Portal Captivo Externo</strong> com
-            autenticacao via <strong className="text-foreground">servidor RADIUS externo (FreeRADIUS)</strong>.
+            O Aruba Instant On usa o método <strong className="text-foreground">Portal Captivo Externo</strong> com
+            autenticação via <strong className="text-foreground">servidor RADIUS externo (FreeRADIUS)</strong>.
             Quando um cliente conecta na rede Guest, o AP redireciona o navegador para a URL do portal,
-            passando parametros na query string (MAC, SSID, nome do AP, etc.).
+            passando parâmetros na query string (MAC, SSID, nome do AP, etc.).
           </p>
           <p>
-            Apos o login no portal, o cliente e enviado para o endpoint de login do AP (<code className="text-foreground">/cgi-bin/login</code>)
-            com um token de uso unico. O AP valida esse token contra o seu servidor RADIUS e libera o acesso.
+            Após o login no portal, o cliente é enviado para o endpoint de login do AP (<code className="text-foreground">/cgi-bin/login</code>)
+            com um token de uso único. O AP valida esse token contra o seu servidor RADIUS e libera o acesso.
           </p>
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300">
-            <strong className="text-amber-200">Importante:</strong> o modo &quot;Confirmacao do Portal de Convidados&quot;
-            (acknowledgement) <strong className="text-amber-200">nao e mais suportado</strong> por ser instavel em HTTPS.
-            Use sempre &quot;Autenticacao de Convidado (padrao)&quot; com RADIUS.
+            <strong className="text-amber-200">Importante:</strong> o modo &quot;Confirmação do Portal de Convidados&quot;
+            (acknowledgement) <strong className="text-amber-200">não é mais suportado</strong> por ser instável em HTTPS.
+            Use sempre &quot;Autenticação de Convidado (padrão)&quot; com RADIUS.
           </div>
         </CardContent>
       </Card>
@@ -208,27 +208,27 @@ function ArubaSection() {
           <p>
             Selecione <strong className="text-foreground">HP Aruba</strong> (ou <strong className="text-foreground">Ambas</strong>)
             em <strong className="text-foreground">Painel Admin &gt; Controladora</strong>. O painel exibe um guia com a
-            <strong className="text-foreground"> URL do portal</strong>, o <strong className="text-foreground">dominio permitido</strong> e
-            os <strong className="text-foreground">campos do servidor RADIUS</strong> que voce deve preencher na tela do Aruba.
+            <strong className="text-foreground"> URL do portal</strong>, o <strong className="text-foreground">domínio permitido</strong> e
+            os <strong className="text-foreground">campos do servidor RADIUS</strong> que você deve preencher na tela do Aruba.
           </p>
           <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">
-            A autenticacao acontece no <strong className="text-green-200">FreeRADIUS</strong> instalado na sua VPS.
+            A autenticação acontece no <strong className="text-green-200">FreeRADIUS</strong> instalado na sua VPS.
             Veja o guia <strong className="text-green-200">docs/INSTALACAO-FREERADIUS.md</strong> para configurar o servidor.
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Pre-requisitos</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Pré-requisitos</CardTitle></CardHeader>
         <CardContent>
           <Table
-            head={['Requisito', 'Descricao']}
+            head={['Requisito', 'Descrição']}
             rows={[
-              ['Servidor RADIUS', 'FreeRADIUS instalado e acessivel na sua VPS (portas UDP 1812/1813)'],
-              ['HTTPS valido', 'O dominio do portal precisa de certificado SSL (a Vercel emite automaticamente)'],
-              ['Dominio configurado', 'Adicionar o dominio no projeto Vercel (Settings > Domains)'],
+              ['Servidor RADIUS', 'FreeRADIUS instalado e acessível na sua VPS (portas UDP 1812/1813)'],
+              ['HTTPS válido', 'O domínio do portal precisa de certificado SSL (a Vercel emite automaticamente)'],
+              ['Domínio configurado', 'Adicionar o domínio no projeto Vercel (Settings > Domains)'],
               ['Rede Guest', 'Uma rede de visitantes criada no Instant On'],
-              ['DNS liberado', 'O AP precisa resolver o dominio do portal antes do login'],
+              ['DNS liberado', 'O AP precisa resolver o domínio do portal antes do login'],
             ]}
           />
         </CardContent>
@@ -241,11 +241,11 @@ function ArubaSection() {
             {[
               ['App ou portal.arubainstanton.com', 'Acesse sua conta'],
               ['Redes', 'Selecione sua rede Guest (visitantes)'],
-              ['Autenticacao', 'Escolha "Autenticacao de Convidado (padrao)" (NAO use Confirmacao)'],
+              ['Autenticação', 'Escolha "Autenticação de Convidado (padrão)" (NÃO use Confirmação)'],
               ['Tipo de Portal', 'Defina "Externa" e cole a URL do portal'],
               ['Servidor RADIUS', 'Informe o IP da VPS, portas 1812/1813 e o segredo compartilhado'],
-              ['Dominios Permitidos (Walled Garden)', 'Adicione o dominio do portal'],
-              ['Salvar', 'Confirme as configuracoes'],
+              ['Domínios Permitidos (Walled Garden)', 'Adicione o domínio do portal'],
+              ['Salvar', 'Confirme as configurações'],
             ].map(([local, acao], i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
@@ -262,14 +262,14 @@ function ArubaSection() {
           <Table
             head={['Campo', 'Valor']}
             rows={[
-              ['Servidor / Endereco IP', 'IP publico da sua VPS (onde roda o FreeRADIUS)'],
-              ['Porta de autenticacao', '1812'],
+              ['Servidor / Endereço IP', 'IP público da sua VPS (onde roda o FreeRADIUS)'],
+              ['Porta de autenticação', '1812'],
               ['Porta de accounting', '1813'],
               ['Segredo compartilhado', 'mesmo Shared Secret do clients.conf do FreeRADIUS'],
             ]}
           />
           <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300 text-sm">
-            O AP precisa <strong className="text-amber-200">alcancar a VPS</strong> nas portas UDP 1812/1813.
+            O AP precisa <strong className="text-amber-200">alcançar a VPS</strong> nas portas UDP 1812/1813.
             Garanta que o firewall da VPS libere essas portas.
           </div>
         </CardContent>
@@ -283,33 +283,33 @@ function ArubaSection() {
             a raiz <code className="text-foreground">/</code> funcionam, pois as duas rotas foram unificadas.
           </p>
           <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">https://SEU-DOMINIO/portal</pre>
-          <p>Exemplo com dominio personalizado:</p>
+          <p>Exemplo com domínio personalizado:</p>
           <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">https://portal.centernet.inf.br/portal</pre>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Dominios Permitidos (Walled Garden)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Domínios Permitidos (Walled Garden)</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
-          <p>Adicione estes dominios para que o portal carregue ANTES da autenticacao:</p>
+          <p>Adicione estes domínios para que o portal carregue ANTES da autenticação:</p>
           <pre className="rounded-lg bg-secondary/50 p-3 text-foreground overflow-x-auto">portal.centernet.inf.br
 fonts.googleapis.com
 fonts.gstatic.com</pre>
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300">
-            <strong className="text-amber-200">IMPORTANTE:</strong> Antes de autenticar, o cliente nao tem internet.
-            Para o portal carregar, o dominio DEVE estar no Walled Garden, incluindo a liberacao de DNS.
-            Use a mesma grafia exata do dominio na URL do portal e aqui (<strong className="text-amber-200">portal.centernet.inf.br</strong>).
+            <strong className="text-amber-200">IMPORTANTE:</strong> Antes de autenticar, o cliente não tem internet.
+            Para o portal carregar, o domínio DEVE estar no Walled Garden, incluindo a liberação de DNS.
+            Use a mesma grafia exata do domínio na URL do portal e aqui (<strong className="text-amber-200">portal.centernet.inf.br</strong>).
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Parametros enviados pela Aruba</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Parâmetros enviados pela Aruba</CardTitle></CardHeader>
         <CardContent>
           <Table
-            head={['Parametro', 'Descricao']}
+            head={['Parâmetro', 'Descrição']}
             rows={[
-              ['cmd', 'Comando (login, logout) - identifica que e Aruba'],
+              ['cmd', 'Comando (login, logout) - identifica que é Aruba'],
               ['mac', 'MAC address do cliente'],
               ['ip', 'IP do cliente'],
               ['essid', 'SSID da rede'],
@@ -326,17 +326,17 @@ fonts.gstatic.com</pre>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Solucao de Problemas</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Solução de Problemas</CardTitle></CardHeader>
         <CardContent>
           <Table
-            head={['Sintoma', 'Causa provavel', 'Solucao']}
+            head={['Sintoma', 'Causa provável', 'Solução']}
             rows={[
-              ['"Site nao encontrado" ao conectar', 'DNS bloqueado antes do login', 'Adicionar dominio + DNS no Walled Garden'],
-              ['Portal nao abre / tela em branco', 'Dominio fora do Walled Garden', 'Adicionar o dominio do portal no Walled Garden'],
-              ['Erro de certificado', 'HTTPS nao configurado', 'Confirmar SSL ativo no dominio da Vercel'],
-              ['Loga no portal mas nao libera', 'AP nao alcanca o RADIUS', 'Liberar UDP 1812/1813 e conferir IP/segredo do RADIUS'],
+              ['"Site não encontrado" ao conectar', 'DNS bloqueado antes do login', 'Adicionar domínio + DNS no Walled Garden'],
+              ['Portal não abre / tela em branco', 'Domínio fora do Walled Garden', 'Adicionar o domínio do portal no Walled Garden'],
+              ['Erro de certificado', 'HTTPS não configurado', 'Confirmar SSL ativo no domínio da Vercel'],
+              ['Loga no portal mas não libera', 'AP não alcança o RADIUS', 'Liberar UDP 1812/1813 e conferir IP/segredo do RADIUS'],
               ['"Access-Reject" no RADIUS', 'Segredo ou token incorreto', 'Conferir o Shared Secret no clients.conf e no AP'],
-              ['Log nao aparece no admin', 'AP nao esta redirecionando', 'Confirmar tipo "Externa" e modo "Autenticacao de Convidado"'],
+              ['Log não aparece no admin', 'AP não está redirecionando', 'Confirmar tipo "Externa" e modo "Autenticação de Convidado"'],
             ]}
           />
         </CardContent>
@@ -349,14 +349,14 @@ fonts.gstatic.com</pre>
 function UnifiSection() {
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={Router} title="Configuracao UniFi" subtitle="Ubiquiti Cloud Key, UDM, UDR" />
+      <SectionHeader icon={Router} title="Configuração UniFi" subtitle="Ubiquiti Cloud Key, UDM, UDR" />
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Visao Geral</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Visão Geral</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>
-            O UniFi usa <strong className="text-foreground">API de autorizacao ativa</strong>. O sistema se conecta
-            a controladora com usuario e senha e autoriza/desautoriza clientes diretamente, alem de aplicar
+            O UniFi usa <strong className="text-foreground">API de autorização ativa</strong>. O sistema se conecta
+            à controladora com usuário e senha e autoriza/desautoriza clientes diretamente, além de aplicar
             limites de velocidade.
           </p>
         </CardContent>
@@ -370,17 +370,17 @@ function UnifiSection() {
             <strong className="text-foreground"> Painel Admin &gt; Controladora</strong> e preencha:
           </p>
           <Table
-            head={['Campo', 'Exemplo / Valor', 'Descricao']}
+            head={['Campo', 'Exemplo / Valor', 'Descrição']}
             rows={[
-              ['URL do Controller', 'https://192.168.1.1', 'IP local ou dominio do Cloud Key / UDM / UDR'],
-              ['Usuario', 'admin', 'Conta com permissao de administrador na controladora'],
-              ['Senha', '••••••', 'Senha do usuario administrador'],
+              ['URL do Controller', 'https://192.168.1.1', 'IP local ou domínio do Cloud Key / UDM / UDR'],
+              ['Usuário', 'admin', 'Conta com permissão de administrador na controladora'],
+              ['Senha', '••••••', 'Senha do usuário administrador'],
               ['Site / Dispositivo', 'default', 'Nome do site (geralmente "default")'],
             ]}
           />
           <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-blue-300 text-sm">
-            Use o botao <strong className="text-blue-200">Testar Conexao</strong> apos preencher para
-            validar usuario, senha e listar os sites disponiveis antes de salvar.
+            Use o botão <strong className="text-blue-200">Testar Conexão</strong> após preencher para
+            validar usuário, senha e listar os sites disponíveis antes de salvar.
           </div>
         </CardContent>
       </Card>
@@ -390,12 +390,12 @@ function UnifiSection() {
         <CardContent>
           <ol className="flex flex-col gap-3 text-sm">
             {[
-              ['Criar usuario na controladora', 'Crie um admin dedicado (Settings > Admins) para a integracao'],
+              ['Criar usuário na controladora', 'Crie um admin dedicado (Settings > Admins) para a integração'],
               ['Painel admin > Controladora', 'Selecione "UniFi" (ou "Ambas") como tipo'],
-              ['Preencher os dados', 'URL do Controller, usuario, senha e site'],
-              ['Testar Conexao', 'Valide as credenciais e selecione o site detectado'],
+              ['Preencher os dados', 'URL do Controller, usuário, senha e site'],
+              ['Testar Conexão', 'Valide as credenciais e selecione o site detectado'],
               ['Configurar Guest Portal na UniFi', 'Em Settings > Guest Hotspot, ative portal externo e aponte para a URL do sistema'],
-              ['Salvar Configuracao', 'Confirme para gravar os dados no sistema'],
+              ['Salvar Configuração', 'Confirme para gravar os dados no sistema'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
@@ -410,9 +410,9 @@ function UnifiSection() {
         <CardHeader><CardTitle className="text-lg">Vantagens da API ativa</CardTitle></CardHeader>
         <CardContent>
           <ul className="flex flex-col gap-2 text-sm text-muted-foreground list-disc pl-5">
-            <li>Desconexao imediata quando o admin encerra a sessao.</li>
-            <li>Desconexao do dispositivo antigo no login unico.</li>
-            <li>Aplicacao de limites de velocidade por usuario.</li>
+            <li>Desconexão imediata quando o admin encerra a sessão.</li>
+            <li>Desconexão do dispositivo antigo no login único.</li>
+            <li>Aplicação de limites de velocidade por usuário.</li>
             <li>Listagem de sites e dispositivos diretamente no painel.</li>
           </ul>
         </CardContent>
@@ -433,26 +433,26 @@ function BothSection() {
           <p>
             O modo <strong className="text-foreground">Ambas</strong> permite operar
             <strong className="text-foreground"> UniFi e Aruba Instant On simultaneamente</strong> com o mesmo
-            portal. Util quando voce tem redes separadas (ex: UniFi no escritorio e Aruba na loja) gerenciadas
+            portal. Útil quando você tem redes separadas (ex: UniFi no escritório e Aruba na loja) gerenciadas
             pelo mesmo sistema.
           </p>
           <p>
             Selecione <strong className="text-foreground">Ambas</strong> em
             <strong className="text-foreground"> Painel Admin &gt; Controladora</strong>. O painel mostra os campos
-            das duas controladoras ao mesmo tempo: preencha os dados de API da UniFi e siga as instrucoes de RADIUS da Aruba.
+            das duas controladoras ao mesmo tempo: preencha os dados de API da UniFi e siga as instruções de RADIUS da Aruba.
           </p>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Deteccao automatica</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Detecção automática</CardTitle></CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            O sistema identifica qual controladora redirecionou o cliente pelos parametros da URL e autoriza
+            O sistema identifica qual controladora redirecionou o cliente pelos parâmetros da URL e autoriza
             no equipamento correto, sem conflito:
           </p>
           <Table
-            head={['Parametro recebido', 'Controladora detectada', 'Acao']}
+            head={['Parâmetro recebido', 'Controladora detectada', 'Ação']}
             rows={[
               ['cmd=login', 'Aruba Instant On', 'Libera via RADIUS (/cgi-bin/login)'],
               ['ap=XX:XX:XX', 'UniFi', 'Autoriza via API ativa'],
@@ -466,9 +466,9 @@ function BothSection() {
         <CardHeader><CardTitle className="text-lg">Estabilidade</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>
-            Cada cliente vem de apenas <strong className="text-foreground">uma</strong> controladora por vez, entao
-            nao ha risco de conflito. A unica situacao de atencao seria a mesma rede WiFi passando pelas duas
-            controladoras ao mesmo tempo &mdash; cenario raro de arquitetura de rede.
+            Cada cliente vem de apenas <strong className="text-foreground">uma</strong> controladora por vez, então
+            não há risco de conflito. A única situação de atenção seria a mesma rede WiFi passando pelas duas
+            controladoras ao mesmo tempo &mdash; cenário raro de arquitetura de rede.
           </p>
         </CardContent>
       </Card>
@@ -480,29 +480,29 @@ function BothSection() {
 function VouchersSection() {
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={Ticket} title="Gestao de Vouchers" subtitle="Codigos de acesso temporario" />
+      <SectionHeader icon={Ticket} title="Gestão de Vouchers" subtitle="Códigos de acesso temporário" />
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">O que sao vouchers</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">O que são vouchers</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed">
           <p>
-            Vouchers sao <strong className="text-foreground">codigos de acesso</strong> que o visitante digita no
-            portal para liberar a internet, sem precisar de cadastro. Ideais para eventos, recepcoes e acessos rapidos.
+            Vouchers são <strong className="text-foreground">códigos de acesso</strong> que o visitante digita no
+            portal para liberar a internet, sem precisar de cadastro. Ideais para eventos, recepções e acessos rápidos.
           </p>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Parametros de um voucher</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Parâmetros de um voucher</CardTitle></CardHeader>
         <CardContent>
           <Table
-            head={['Campo', 'Descricao']}
+            head={['Campo', 'Descrição']}
             rows={[
-              ['Codigo', 'Gerado automaticamente ou definido manualmente'],
-              ['Duracao', 'Tempo de acesso em minutos'],
-              ['Maximo de usos', 'Quantas vezes o codigo pode ser usado'],
+              ['Código', 'Gerado automaticamente ou definido manualmente'],
+              ['Duração', 'Tempo de acesso em minutos'],
+              ['Máximo de usos', 'Quantas vezes o código pode ser usado'],
               ['Velocidade', 'Limites de download e upload (kbps)'],
-              ['Expiracao', 'Data limite para o voucher ser valido'],
+              ['Expiração', 'Data limite para o voucher ser válido'],
             ]}
           />
         </CardContent>
@@ -514,9 +514,9 @@ function VouchersSection() {
           <ol className="flex flex-col gap-3 text-sm">
             {[
               ['Painel admin > Vouchers', 'Acesse a aba de vouchers'],
-              ['Definir parametros', 'Duracao, usos, velocidade e expiracao'],
-              ['Gerar', 'O sistema cria o codigo'],
-              ['Distribuir', 'Entregue o codigo ao visitante'],
+              ['Definir parâmetros', 'Duração, usos, velocidade e expiração'],
+              ['Gerar', 'O sistema cria o código'],
+              ['Distribuir', 'Entregue o código ao visitante'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
@@ -534,15 +534,15 @@ function VouchersSection() {
 function UsersSection() {
   return (
     <div className="flex flex-col gap-6">
-      <SectionHeader icon={Users} title="Gestao de Usuarios" subtitle="Aprovacao, bloqueio e limites" />
+      <SectionHeader icon={Users} title="Gestão de Usuários" subtitle="Aprovação, bloqueio e limites" />
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Status de um usuario</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Status de um usuário</CardTitle></CardHeader>
         <CardContent>
           <Table
             head={['Status', 'Significado']}
             rows={[
-              ['Pendente', 'Aguardando aprovacao do admin (se aprovacao estiver ativa)'],
+              ['Pendente', 'Aguardando aprovação do admin (se aprovação estiver ativa)'],
               ['Ativo', 'Pode acessar a internet normalmente'],
               ['Bloqueado', 'Acesso negado e desconectado da controladora'],
             ]}
@@ -551,13 +551,13 @@ function UsersSection() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Limites por usuario</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Limites por usuário</CardTitle></CardHeader>
         <CardContent>
           <Table
-            head={['Limite', 'Descricao']}
+            head={['Limite', 'Descrição']}
             rows={[
-              ['Tempo por sessao', 'Duracao de cada conexao em minutos'],
-              ['Tempo diario', 'Total de minutos por dia (0 = ilimitado)'],
+              ['Tempo por sessão', 'Duração de cada conexão em minutos'],
+              ['Tempo diário', 'Total de minutos por dia (0 = ilimitado)'],
               ['Velocidade download', 'Limite de download em kbps'],
               ['Velocidade upload', 'Limite de upload em kbps'],
             ]}
@@ -566,28 +566,28 @@ function UsersSection() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Login Unico</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Login Único</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
           <p>
-            Cada usuario pode ter <strong className="text-foreground">apenas uma sessao ativa por vez</strong>.
-            Ao fazer login em um novo dispositivo, a sessao anterior e encerrada automaticamente e o dispositivo
-            antigo e desconectado (no caso do UniFi, imediatamente via API).
+            Cada usuário pode ter <strong className="text-foreground">apenas uma sessão ativa por vez</strong>.
+            Ao fazer login em um novo dispositivo, a sessão anterior é encerrada automaticamente e o dispositivo
+            antigo é desconectado (no caso do UniFi, imediatamente via API).
           </p>
           <p>
-            Quando o campo MAC esta preenchido e o dispositivo ja possui sessao ativa, o sistema faz
-            <strong className="text-foreground"> reconexao automatica</strong> sem pedir login novamente.
+            Quando o campo MAC está preenchido e o dispositivo já possui sessão ativa, o sistema faz
+            <strong className="text-foreground"> reconexão automática</strong> sem pedir login novamente.
           </p>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Aprovacao de pendentes</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Aprovação de pendentes</CardTitle></CardHeader>
         <CardContent>
           <ol className="flex flex-col gap-3 text-sm">
             {[
-              ['Ativar aprovacao', 'Em Configuracoes, habilite "Requer aprovacao"'],
-              ['Usuario se cadastra', 'O novo cadastro entra como pendente'],
-              ['Admin revisa', 'Na Visao Geral aparecem os usuarios aguardando'],
+              ['Ativar aprovação', 'Em Configurações, habilite "Requer aprovação"'],
+              ['Usuário se cadastra', 'O novo cadastro entra como pendente'],
+              ['Admin revisa', 'Na Visão Geral aparecem os usuários aguardando'],
               ['Aprovar ou bloquear', 'Decida o acesso de cada um'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">

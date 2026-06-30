@@ -139,7 +139,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
         window.location.href = successUrl.toString()
       }
     } else {
-      setError(result.error || 'Codigo invalido')
+      setError(result.error || 'Código inválido')
     }
     
     setLoading(false)
@@ -204,7 +204,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
         <CardContent>
           {!macAddress && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm">
-              Aviso: MAC address nao detectado. O acesso pode nao ser autorizado automaticamente.
+              Aviso: MAC address não detectado. O acesso pode não ser autorizado automaticamente.
             </div>
           )}
           
@@ -311,7 +311,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
                   <Input
                     id="register-password"
                     type="password"
-                    placeholder="Minimo 6 caracteres"
+                    placeholder="Mínimo 6 caracteres"
                     className="!bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
@@ -349,13 +349,13 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
             <TabsContent value="voucher">
               <form onSubmit={handleVoucher} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="voucher-code" className="text-slate-700">Codigo de acesso</Label>
+                  <Label htmlFor="voucher-code" className="text-slate-700">Código de acesso</Label>
                   <div className="relative">
                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
                       id="voucher-code"
                       type="text"
-                      placeholder="Digite o codigo"
+                      placeholder="Digite o código"
                       className="pl-10 uppercase font-mono tracking-wider !bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
                       value={voucherCode}
                       onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
