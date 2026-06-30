@@ -1,11 +1,17 @@
 import { put } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml', 'image/gif']
 const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticação — apenas admins podem fazer upload
+    const session = await getSession()
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
     const formData = await request.formData()
     const file = formData.get('file') as File | null
 

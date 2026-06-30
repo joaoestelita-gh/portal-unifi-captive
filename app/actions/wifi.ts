@@ -9,6 +9,7 @@ import { getArubaClient, type ArubaRedirectParams, type ArubaAuthCredentials } f
 import { createRadiusToken } from '@/lib/radius'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
+import { registerWifiUserSchema, loginWifiUserSchema, loginVoucherSchema, generateVouchersSchema } from '@/lib/validations'
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10)
@@ -456,19 +457,24 @@ export async function registerWifiUser(data: {
   phone?: string
   password: string
 }) {
+  const parsed = registerWifiUserSchema.safeParse(data)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message || 'Dados inválidos' }
+  }
+
   const settings = await getPortalSettings()
-  const hashedPassword = await hashPassword(data.password)
+  const hashedPassword = await hashPassword(parsed.data.password)
   
-  const existingUser = await db.select().from(wifiUsers).where(eq(wifiUsers.email, data.email))
+  const existingUser = await db.select().from(wifiUsers).where(eq(wifiUsers.email, parsed.data.email))
   if (existingUser.length > 0) {
     return { success: false, error: 'Email já cadastrado' }
   }
 
   const newUser = {
     id: nanoid(),
-    name: data.name,
-    email: data.email,
-    phone: data.phone || null,
+    name: parsed.data.name,
+    email: parsed.data.email,
+    phone: parsed.data.phone || null,
     password: hashedPassword,
     status: settings.requireApproval ? 'pending' : 'approved',
     dailyLimitMinutes: settings.defaultDailyMinutes,
@@ -569,7 +575,12 @@ export async function checkActiveSession(macAddress: string, detectedController?
 
 // WiFi User Login
 export async function loginWifiUser(email: string, password: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
-  const users = await db.select().from(wifiUsers).where(eq(wifiUsers.email, email))
+  const parsed = loginWifiUserSchema.safeParse({ email, password, macAddress })
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message || 'Dados inválidos' }
+  }
+
+  const users = await db.select().from(wifiUsers).where(eq(wifiUsers.email, parsed.data.email))
   
   if (users.length === 0) {
     return { success: false, error: 'Usuário não encontrado' }
@@ -692,7 +703,12 @@ export async function loginWifiUser(email: string, password: string, macAddress:
 
 // Voucher Login
 export async function loginWithVoucher(code: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
-  const vouchers = await db.select().from(wifiVouchers).where(eq(wifiVouchers.code, code.toUpperCase()))
+  const parsed = loginVoucherSchema.safeParse({ code, macAddress })
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message || 'Dados inválidos' }
+  }
+
+  const vouchers = await db.select().from(wifiVouchers).where(eq(wifiVouchers.code, parsed.data.code.toUpperCase()))
   
   if (vouchers.length === 0) {
     return { success: false, error: 'Codigo invalido' }
@@ -878,17 +894,28 @@ export async function generateVouchers(data: {
   expiresAt?: Date
   createdBy: string
 }) {
+  const parsed = generateVouchersSchema.safeParse({
+    count: data.quantity,
+    durationMinutes: data.durationMinutes,
+    speedLimitDown: data.speedLimitDown,
+    speedLimitUp: data.speedLimitUp,
+    maxUses: data.maxUses,
+  })
+  if (!parsed.success) {
+    throw new Error(parsed.error.errors[0]?.message || 'Dados inválidos para voucher')
+  }
+
   const vouchers = []
   
-  for (let i = 0; i < data.quantity; i++) {
+  for (let i = 0; i < parsed.data.count; i++) {
     const code = nanoid(8).toUpperCase()
     vouchers.push({
       id: nanoid(),
       code,
-      durationMinutes: data.durationMinutes,
-      speedLimitDown: data.speedLimitDown || 10240,
-      speedLimitUp: data.speedLimitUp || 5120,
-      maxUses: data.maxUses || 1,
+      durationMinutes: parsed.data.durationMinutes,
+      speedLimitDown: parsed.data.speedLimitDown || 10240,
+      speedLimitUp: parsed.data.speedLimitUp || 5120,
+      maxUses: parsed.data.maxUses || 1,
       usedCount: 0,
       expiresAt: data.expiresAt || null,
       createdBy: data.createdBy,

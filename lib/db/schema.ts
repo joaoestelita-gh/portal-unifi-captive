@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, date } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, boolean, integer, date, index } from 'drizzle-orm/pg-core'
 
 // --- Auth tables -------------------------------------------
 export const users = pgTable('user', {
@@ -24,7 +24,9 @@ export const sessions = pgTable('session', {
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-})
+}, (table) => [
+  index('session_userId_idx').on(table.userId),
+])
 
 export const account = pgTable('account', {
   id: text('id').primaryKey(),
@@ -70,7 +72,10 @@ export const wifiUsers = pgTable('wifi_users', {
   lastResetDate: date('lastResetDate').defaultNow(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
-})
+}, (table) => [
+  index('wifi_users_status_idx').on(table.status),
+  index('wifi_users_macAddress_idx').on(table.macAddress),
+])
 
 export const wifiSessions = pgTable('wifi_sessions', {
   id: text('id').primaryKey(),
@@ -84,7 +89,11 @@ export const wifiSessions = pgTable('wifi_sessions', {
   status: text('status').notNull().default('active'), // active, ended, expired
   endReason: text('endReason'), // manual, expired, new_login
   createdAt: timestamp('createdAt').notNull().defaultNow(),
-})
+}, (table) => [
+  index('wifi_sessions_mac_status_idx').on(table.macAddress, table.status),
+  index('wifi_sessions_status_expectedEnd_idx').on(table.status, table.expectedEndTime),
+  index('wifi_sessions_wifiUserId_idx').on(table.wifiUserId),
+])
 
 export const wifiVouchers = pgTable('wifi_vouchers', {
   id: text('id').primaryKey(),
@@ -117,7 +126,9 @@ export const radiusTokens = pgTable('radius_tokens', {
   usedAt: timestamp('usedAt'),
   expiresAt: timestamp('expiresAt').notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
-})
+}, (table) => [
+  index('radius_tokens_expiresAt_idx').on(table.expiresAt),
+])
 
 export const portalSettings = pgTable('portal_settings', {
   id: text('id').primaryKey().default('default'),

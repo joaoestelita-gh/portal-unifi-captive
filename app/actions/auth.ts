@@ -1,11 +1,17 @@
 'use server'
 
 import { signIn, signOut, getSession, createUser, changePassword, getAllAdmins, deleteAdmin, updateAdmin } from '@/lib/auth'
+import { loginSchema, registerAdminSchema, changePasswordSchema } from '@/lib/validations'
 import { revalidatePath } from 'next/cache'
 
 export async function loginAdmin(email: string, password: string) {
+  const parsed = loginSchema.safeParse({ email, password })
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message || 'Dados inválidos' }
+  }
+
   try {
-    const user = await signIn(email, password)
+    const user = await signIn(parsed.data.email, parsed.data.password)
     
     if (user.role !== 'admin') {
       return { error: 'Acesso negado. Apenas administradores podem acessar.' }
@@ -28,6 +34,11 @@ export async function getCurrentUser() {
 }
 
 export async function registerAdmin(data: { name: string; email: string; password: string }) {
+  const parsed = registerAdminSchema.safeParse(data)
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message || 'Dados inválidos' }
+  }
+
   try {
     const session = await getSession()
     if (!session || session.user.role !== 'admin') {
@@ -35,9 +46,9 @@ export async function registerAdmin(data: { name: string; email: string; passwor
     }
     
     const user = await createUser({
-      name: data.name,
-      email: data.email,
-      password: data.password,
+      name: parsed.data.name,
+      email: parsed.data.email,
+      password: parsed.data.password,
       role: 'admin',
     })
     
@@ -53,13 +64,18 @@ export async function registerAdmin(data: { name: string; email: string; passwor
 }
 
 export async function updatePassword(currentPassword: string, newPassword: string) {
+  const parsed = changePasswordSchema.safeParse({ currentPassword, newPassword })
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message || 'Dados inválidos' }
+  }
+
   try {
     const session = await getSession()
     if (!session) {
       return { error: 'Não autenticado' }
     }
     
-    await changePassword(session.user.id, currentPassword, newPassword)
+    await changePassword(session.user.id, parsed.data.currentPassword, parsed.data.newPassword)
     return { success: true }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Erro ao alterar senha' }

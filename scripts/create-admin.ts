@@ -1,6 +1,8 @@
 import { db } from '@/lib/db'
-import { user, account } from '@/lib/db/schema'
+import { users } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import bcrypt from 'bcryptjs'
 
 // Run this to create the first admin user
 // Usage: npx tsx scripts/create-admin.ts
@@ -10,42 +12,42 @@ async function createAdmin() {
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
   const adminName = process.env.ADMIN_NAME || 'Administrador'
 
-  // Hash password
-  const encoder = new TextEncoder()
-  const data = encoder.encode(adminPassword + process.env.BETTER_AUTH_SECRET)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  const hashedPassword = Buffer.from(hash).toString('hex')
+  // Hash password with bcrypt (same as lib/auth.ts)
+  const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
   const userId = nanoid()
 
   try {
-    // Create user
-    await db.insert(user).values({
+    // Check if admin already exists
+    const existing = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, adminEmail))
+      .limit(1)
+
+    if (existing.length > 0) {
+      console.log('Admin já existe com este email. Nenhuma ação necessária.')
+      process.exit(0)
+    }
+
+    // Create user with admin role
+    await db.insert(users).values({
       id: userId,
       name: adminName,
       email: adminEmail,
       emailVerified: true,
+      password: hashedPassword,
       role: 'admin',
       createdAt: new Date(),
       updatedAt: new Date(),
     })
 
-    // Create account with password
-    await db.insert(account).values({
-      id: nanoid(),
-      accountId: userId,
-      providerId: 'credential',
-      userId: userId,
-      password: hashedPassword,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
-    console.log('Admin user created successfully!')
+    console.log('Admin criado com sucesso!')
     console.log(`Email: ${adminEmail}`)
-    console.log(`Password: ${adminPassword}`)
+    console.log(`Senha: ${adminPassword}`)
+    console.log('\nAcesse /admin/login para fazer login.')
   } catch (error) {
-    console.error('Error creating admin:', error)
+    console.error('Erro ao criar admin:', error)
   }
 
   process.exit(0)
