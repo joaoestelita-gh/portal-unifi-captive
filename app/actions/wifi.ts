@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/lib/db'
-import { wifiUsers, wifiSessions, wifiVouchers, portalSettings } from '@/lib/db/schema'
+import { wifiUsers, wifiSessions, wifiVouchers, portalSettings, wifiUserDevices } from '@/lib/db/schema'
 import { eq, desc, sql, lt, and } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { getUnifiClient } from '@/lib/unifi'
@@ -13,6 +13,58 @@ import { registerWifiUserSchema, loginWifiUserSchema, loginVoucherSchema, genera
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10)
+}
+
+const MAX_DEVICES_PER_USER = 3
+
+// Helper: Register or update a device for a user (max 3 devices)
+async function registerDevice(wifiUserId: string, macAddress: string): Promise<{ success: boolean; error?: string }> {
+  if (!macAddress) return { success: true }
+
+  // Check if this MAC is already registered for this user
+  const existing = await db.select().from(wifiUserDevices)
+    .where(and(
+      eq(wifiUserDevices.wifiUserId, wifiUserId),
+      eq(wifiUserDevices.macAddress, macAddress)
+    ))
+    .limit(1)
+
+  if (existing.length > 0) {
+    // Device already registered, just update lastSeen
+    await db.update(wifiUserDevices).set({ lastSeen: new Date() })
+      .where(eq(wifiUserDevices.id, existing[0].id))
+    return { success: true }
+  }
+
+  // Check if user already has max devices
+  const deviceCount = await db.select().from(wifiUserDevices)
+    .where(eq(wifiUserDevices.wifiUserId, wifiUserId))
+
+  if (deviceCount.length >= MAX_DEVICES_PER_USER) {
+    // Remove the oldest device (least recently seen) to make room
+    const oldest = deviceCount.sort((a, b) => 
+      new Date(a.lastSeen).getTime() - new Date(b.lastSeen).getTime()
+    )[0]
+    await db.delete(wifiUserDevices).where(eq(wifiUserDevices.id, oldest.id))
+  }
+
+  // Register new device
+  await db.insert(wifiUserDevices).values({
+    id: nanoid(),
+    wifiUserId,
+    macAddress,
+    deviceName: null,
+    trusted: false,
+    trustedUntil: null,
+    lastSeen: new Date(),
+    createdAt: new Date(),
+  })
+
+  // Also keep the macAddress field on wifiUsers updated (for backwards compat)
+  await db.update(wifiUsers).set({ macAddress, updatedAt: new Date() })
+    .where(eq(wifiUsers.id, wifiUserId))
+
+  return { success: true }
 }
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
@@ -570,36 +622,79 @@ export async function checkActiveSession(macAddress: string, detectedController?
   }
 
   // 2. No active session — check if this MAC belongs to a TRUSTED device
-  const trustedUser = await db.select()
-    .from(wifiUsers)
+  // First check in wifi_user_devices table (multi-device support)
+  const trustedDevice = await db.select({
+    device: wifiUserDevices,
+    user: wifiUsers,
+  })
+    .from(wifiUserDevices)
+    .innerJoin(wifiUsers, eq(wifiUserDevices.wifiUserId, wifiUsers.id))
     .where(
       and(
-        eq(wifiUsers.macAddress, macAddress),
-        eq(wifiUsers.trusted, true),
+        eq(wifiUserDevices.macAddress, macAddress),
+        eq(wifiUserDevices.trusted, true),
         eq(wifiUsers.status, 'approved')
       )
     )
     .limit(1)
 
-  if (trustedUser.length === 0) {
+  // Fallback: also check the legacy macAddress field on wifiUsers
+  let user: typeof wifiUsers.$inferSelect | null = null
+  let deviceId: string | null = null
+  let deviceTrustedUntil: Date | null = null
+
+  if (trustedDevice.length > 0) {
+    user = trustedDevice[0].user
+    deviceId = trustedDevice[0].device.id
+    deviceTrustedUntil = trustedDevice[0].device.trustedUntil
+  } else {
+    // Legacy fallback: check wifiUsers.macAddress + wifiUsers.trusted
+    const legacyTrusted = await db.select()
+      .from(wifiUsers)
+      .where(
+        and(
+          eq(wifiUsers.macAddress, macAddress),
+          eq(wifiUsers.trusted, true),
+          eq(wifiUsers.status, 'approved')
+        )
+      )
+      .limit(1)
+    if (legacyTrusted.length > 0) {
+      user = legacyTrusted[0]
+      deviceTrustedUntil = legacyTrusted[0].trustedUntil
+    }
+  }
+
+  if (!user) {
     return { hasActiveSession: false }
   }
 
-  const user = trustedUser[0]
-
   // Check if trust period has expired (null = permanent)
-  if (user.trustedUntil && new Date(user.trustedUntil) < new Date()) {
-    // Trust expired — revoke trusted status
-    await db.update(wifiUsers).set({
-      trusted: false,
-      trustedUntil: null,
-      updatedAt: new Date(),
-    }).where(eq(wifiUsers.id, user.id))
+  if (deviceTrustedUntil && new Date(deviceTrustedUntil) < new Date()) {
+    // Trust expired — revoke on the device
+    if (deviceId) {
+      await db.update(wifiUserDevices).set({
+        trusted: false,
+        trustedUntil: null,
+      }).where(eq(wifiUserDevices.id, deviceId))
+    } else {
+      await db.update(wifiUsers).set({
+        trusted: false,
+        trustedUntil: null,
+        updatedAt: new Date(),
+      }).where(eq(wifiUsers.id, user.id))
+    }
     return { hasActiveSession: false }
   }
 
   // Trusted device! Create a new session automatically.
   console.log('[Portal] Trusted device auto-connect:', macAddress, user.name)
+
+  // Update lastSeen on device
+  if (deviceId) {
+    await db.update(wifiUserDevices).set({ lastSeen: new Date() })
+      .where(eq(wifiUserDevices.id, deviceId))
+  }
 
   const settings = await getPortalSettings()
   const sessionMinutes = user.sessionLimitMinutes || settings.defaultSessionMinutes || 120
@@ -747,10 +842,7 @@ export async function loginWifiUser(email: string, password: string, macAddress:
   )
 
   // Update user MAC and create session
-  await db.update(wifiUsers).set({ 
-    macAddress, 
-    updatedAt: new Date() 
-  }).where(eq(wifiUsers.id, user.id))
+  await registerDevice(user.id, macAddress)
 
   const sessionId = nanoid()
   const sessionEndTime = new Date(Date.now() + sessionMinutes * 60 * 1000)
@@ -931,6 +1023,73 @@ export async function removeTrustedDevice(userId: string) {
     trustedUntil: null,
     updatedAt: new Date(),
   }).where(eq(wifiUsers.id, userId))
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// --- Device Management Actions ---
+
+// Get all devices for a user
+export async function getUserDevices(userId: string) {
+  return db.select().from(wifiUserDevices)
+    .where(eq(wifiUserDevices.wifiUserId, userId))
+    .orderBy(desc(wifiUserDevices.lastSeen))
+}
+
+// Set trust on a specific device
+export async function setDeviceTrusted(deviceId: string, duration: string) {
+  let trustedUntil: Date | null = null
+
+  switch (duration) {
+    case '7days':
+      trustedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      break
+    case '30days':
+      trustedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      break
+    case '90days':
+      trustedUntil = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+      break
+    case 'permanent':
+    default:
+      trustedUntil = null
+      break
+  }
+
+  await db.update(wifiUserDevices).set({
+    trusted: true,
+    trustedUntil,
+  }).where(eq(wifiUserDevices.id, deviceId))
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// Remove trust from a specific device
+export async function removeDeviceTrust(deviceId: string) {
+  await db.update(wifiUserDevices).set({
+    trusted: false,
+    trustedUntil: null,
+  }).where(eq(wifiUserDevices.id, deviceId))
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// Rename a device
+export async function renameDevice(deviceId: string, deviceName: string) {
+  await db.update(wifiUserDevices).set({
+    deviceName: deviceName || null,
+  }).where(eq(wifiUserDevices.id, deviceId))
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// Remove a device entirely
+export async function removeDevice(deviceId: string) {
+  await db.delete(wifiUserDevices).where(eq(wifiUserDevices.id, deviceId))
 
   revalidatePath('/admin')
   return { success: true }

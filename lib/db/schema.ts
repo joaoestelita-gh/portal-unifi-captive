@@ -133,6 +133,21 @@ export const radiusTokens = pgTable('radius_tokens', {
   index('radius_tokens_expiresAt_idx').on(table.expiresAt),
 ])
 
+// --- WiFi User Devices (multiple MACs per user, max 3) ---
+export const wifiUserDevices = pgTable('wifi_user_devices', {
+  id: text('id').primaryKey(),
+  wifiUserId: text('wifiUserId').notNull(),
+  macAddress: text('macAddress').notNull(),
+  deviceName: text('deviceName'), // e.g. "Celular", "Notebook", "Tablet"
+  trusted: boolean('trusted').notNull().default(false),
+  trustedUntil: timestamp('trustedUntil'), // null = permanente
+  lastSeen: timestamp('lastSeen').notNull().defaultNow(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+}, (table) => [
+  index('wifi_user_devices_userId_idx').on(table.wifiUserId),
+  index('wifi_user_devices_mac_idx').on(table.macAddress),
+])
+
 export const portalSettings = pgTable('portal_settings', {
   id: text('id').primaryKey().default('default'),
   portalTitle: text('portalTitle').default('WiFi Gratuito'),
