@@ -1171,7 +1171,7 @@ const result = await updateWifiUser(editingUser.id, {
             {/* Edit User Modal */}
             {editingUser && (
               <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <Card className="w-full max-w-lg bg-card border-border">
+                <Card className="w-full max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Pencil className="w-5 h-5 text-primary" />
