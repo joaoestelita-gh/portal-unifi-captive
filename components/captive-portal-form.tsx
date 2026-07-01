@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { registerWifiUser, loginWifiUser, loginWithVoucher } from '@/app/actions/wifi'
-import { ThemeToggle } from '@/components/theme-toggle'
 import type { ArubaRedirectParams } from '@/lib/aruba'
 
 interface PortalSettings {
@@ -165,7 +164,6 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
   if (success) {
     return (
       <div className={bgClass} style={bgStyle}>
-        <ThemeToggle className="fixed top-4 right-4 z-10 bg-card/80 backdrop-blur" />
         <Card className="w-full max-w-md border-0 shadow-2xl bg-card/95 backdrop-blur">
           <CardContent className="pt-8 pb-8 text-center">
             <div 
@@ -185,7 +183,6 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
 
   return (
     <div className={bgClass} style={bgStyle}>
-      <ThemeToggle className="fixed top-4 right-4 z-10 bg-card/80 backdrop-blur" />
       <Card className="w-full max-w-md border-0 shadow-2xl bg-card/95 backdrop-blur">
         <CardHeader className="text-center pb-2">
           {settings.logoUrl ? (
