@@ -1144,7 +1144,7 @@ const result = await updateWifiUser(editingUser.id, {
                                     variant="ghost"
                                     className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                                     title="Marcar como dispositivo confiável"
-                                    onClick={async () => { await setTrustedDevice(user.id, 'permanent'); window.location.reload() }}
+                                    onClick={async () => { await setTrustedDevice(user.id, 'permanent'); router.refresh() }}
                                   >
                                     <Shield className="w-4 h-4" />
                                   </Button>
@@ -1155,7 +1155,7 @@ const result = await updateWifiUser(editingUser.id, {
                                     variant="ghost"
                                     className="text-blue-300 hover:text-red-300 hover:bg-red-500/10 bg-blue-500/10"
                                     title="Remover confiança do dispositivo"
-                                    onClick={async () => { await removeTrustedDevice(user.id); window.location.reload() }}
+                                    onClick={async () => { await removeTrustedDevice(user.id); router.refresh() }}
                                   >
                                     <Shield className="w-4 h-4" />
                                   </Button>
