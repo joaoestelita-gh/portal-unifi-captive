@@ -495,12 +495,14 @@ export async function registerWifiUser(data: {
 }
 
 // Check if MAC has active session and auto-reconnect
+// Also handles trusted devices: if the MAC belongs to a trusted user,
+// a new session is created automatically without requiring login.
 export async function checkActiveSession(macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
   if (!macAddress) {
     return { hasActiveSession: false }
   }
 
-  // Find active session for this MAC
+  // 1. Check for existing active session for this MAC
   const activeSessions = await db.select({
     session: wifiSessions,
     user: wifiUsers,
@@ -516,60 +518,131 @@ export async function checkActiveSession(macAddress: string, detectedController?
     .orderBy(desc(wifiSessions.startTime))
     .limit(1)
 
-  if (activeSessions.length === 0) {
-    return { hasActiveSession: false }
+  if (activeSessions.length > 0) {
+    const { session, user } = activeSessions[0]
+
+    // Check if session is still valid (not expired)
+    if (session.expectedEndTime && new Date(session.expectedEndTime) < new Date()) {
+      // Session expired, mark it
+      await db.update(wifiSessions).set({
+        status: 'expired',
+        endTime: new Date(),
+        endReason: 'expired'
+      }).where(eq(wifiSessions.id, session.id))
+      // Fall through to trusted device check below
+    } else {
+      // Session is still valid - re-authorize on controller
+      const settings = await getPortalSettings()
+      const remainingMinutes = session.expectedEndTime 
+        ? Math.ceil((new Date(session.expectedEndTime).getTime() - Date.now()) / 60000)
+        : 60
+
+      let controllerRedirectUrl: string | undefined
+      if (remainingMinutes > 0) {
+        const radiusToken = await createRadiusToken({
+          macAddress,
+          wifiUserId: user?.id,
+          sessionMinutes: remainingMinutes,
+          speedLimitUp: user?.speedLimitUp || 5120,
+          speedLimitDown: user?.speedLimitDown || 10240,
+        })
+
+        const authResult = await authorizeOnController(
+          macAddress,
+          remainingMinutes,
+          user?.speedLimitUp || 5120,
+          user?.speedLimitDown || 10240,
+          undefined,
+          detectedController,
+          arubaParams,
+          { user: radiusToken, password: radiusToken }
+        )
+        controllerRedirectUrl = authResult.redirectUrl
+      }
+
+      return { 
+        hasActiveSession: true, 
+        userName: user?.name || 'Visitante',
+        remainingMinutes,
+        redirectUrl: controllerRedirectUrl || settings.successRedirectUrl || 'https://google.com'
+      }
+    }
   }
 
-  const { session, user } = activeSessions[0]
-
-  // Check if session is still valid (not expired)
-  if (session.expectedEndTime && new Date(session.expectedEndTime) < new Date()) {
-    // Session expired, mark it
-    await db.update(wifiSessions).set({
-      status: 'expired',
-      endTime: new Date(),
-      endReason: 'expired'
-    }).where(eq(wifiSessions.id, session.id))
-    return { hasActiveSession: false }
-  }
-
-  // Session is still valid - re-authorize on controller
-  const settings = await getPortalSettings()
-  const remainingMinutes = session.expectedEndTime 
-    ? Math.ceil((new Date(session.expectedEndTime).getTime() - Date.now()) / 60000)
-    : 60
-
-  let controllerRedirectUrl: string | undefined
-  if (remainingMinutes > 0) {
-    // Issue a single-use RADIUS token validated by FreeRADIUS through our REST endpoint.
-    const radiusToken = await createRadiusToken({
-      macAddress,
-      wifiUserId: user?.id,
-      sessionMinutes: remainingMinutes,
-      speedLimitUp: user?.speedLimitUp || 5120,
-      speedLimitDown: user?.speedLimitDown || 10240,
-    })
-
-    const authResult = await authorizeOnController(
-      macAddress,
-      remainingMinutes,
-      user?.speedLimitUp || 5120,
-      user?.speedLimitDown || 10240,
-      undefined,
-      detectedController,
-      arubaParams,
-      { user: radiusToken, password: radiusToken }
+  // 2. No active session — check if this MAC belongs to a TRUSTED device
+  const trustedUser = await db.select()
+    .from(wifiUsers)
+    .where(
+      and(
+        eq(wifiUsers.macAddress, macAddress),
+        eq(wifiUsers.trusted, true),
+        eq(wifiUsers.status, 'approved')
+      )
     )
-    controllerRedirectUrl = authResult.redirectUrl
+    .limit(1)
+
+  if (trustedUser.length === 0) {
+    return { hasActiveSession: false }
   }
 
-  return { 
-    hasActiveSession: true, 
-    userName: user?.name || 'Visitante',
-    remainingMinutes,
-    // For Aruba, redirect back to the AP (switchip) to re-grant access;
-    // otherwise use the configured success URL.
-    redirectUrl: controllerRedirectUrl || settings.successRedirectUrl || 'https://google.com'
+  const user = trustedUser[0]
+
+  // Check if trust period has expired (null = permanent)
+  if (user.trustedUntil && new Date(user.trustedUntil) < new Date()) {
+    // Trust expired — revoke trusted status
+    await db.update(wifiUsers).set({
+      trusted: false,
+      trustedUntil: null,
+      updatedAt: new Date(),
+    }).where(eq(wifiUsers.id, user.id))
+    return { hasActiveSession: false }
+  }
+
+  // Trusted device! Create a new session automatically.
+  console.log('[Portal] Trusted device auto-connect:', macAddress, user.name)
+
+  const settings = await getPortalSettings()
+  const sessionMinutes = user.sessionLimitMinutes || settings.defaultSessionMinutes || 120
+
+  // Issue RADIUS token for controller authorization
+  const radiusToken = await createRadiusToken({
+    macAddress,
+    wifiUserId: user.id,
+    sessionMinutes,
+    speedLimitUp: user.speedLimitUp || 5120,
+    speedLimitDown: user.speedLimitDown || 10240,
+  })
+
+  const authResult = await authorizeOnController(
+    macAddress,
+    sessionMinutes,
+    user.speedLimitUp || 5120,
+    user.speedLimitDown || 10240,
+    undefined,
+    detectedController,
+    arubaParams,
+    { user: radiusToken, password: radiusToken }
+  )
+
+  // Create session record
+  const sessionId = nanoid()
+  const sessionEndTime = new Date(Date.now() + sessionMinutes * 60 * 1000)
+
+  await db.insert(wifiSessions).values({
+    id: sessionId,
+    wifiUserId: user.id,
+    macAddress,
+    status: 'active',
+    startTime: new Date(),
+    expectedEndTime: sessionEndTime,
+    createdAt: new Date(),
+  })
+
+  return {
+    hasActiveSession: true,
+    userName: user.name,
+    remainingMinutes: sessionMinutes,
+    redirectUrl: authResult.redirectUrl || settings.successRedirectUrl || 'https://google.com',
   }
 }
 
@@ -818,6 +891,49 @@ export async function deleteWifiUser(userId: string) {
   await db.delete(wifiSessions).where(eq(wifiSessions.wifiUserId, userId))
   await db.delete(wifiUsers).where(eq(wifiUsers.id, userId))
   revalidatePath('/admin')
+}
+
+// Admin: Mark device as trusted (auto-reconnect without login)
+// duration: 'permanent' | '7days' | '30days' | '90days'
+export async function setTrustedDevice(userId: string, duration: string) {
+  let trustedUntil: Date | null = null
+
+  switch (duration) {
+    case '7days':
+      trustedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      break
+    case '30days':
+      trustedUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      break
+    case '90days':
+      trustedUntil = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+      break
+    case 'permanent':
+    default:
+      trustedUntil = null
+      break
+  }
+
+  await db.update(wifiUsers).set({
+    trusted: true,
+    trustedUntil,
+    updatedAt: new Date(),
+  }).where(eq(wifiUsers.id, userId))
+
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+// Admin: Remove trusted status from device
+export async function removeTrustedDevice(userId: string) {
+  await db.update(wifiUsers).set({
+    trusted: false,
+    trustedUntil: null,
+    updatedAt: new Date(),
+  }).where(eq(wifiUsers.id, userId))
+
+  revalidatePath('/admin')
+  return { success: true }
 }
 
 // Admin: Update user limits
