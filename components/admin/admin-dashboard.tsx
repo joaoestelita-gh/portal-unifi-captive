@@ -1569,24 +1569,12 @@ const result = await updateWifiUser(editingUser.id, {
                   </Button>
                   
                   {generatedCodes.length > 0 && (
-                    <div className="mt-4 p-4 bg-secondary/30 rounded-xl border border-border/30">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-medium text-foreground">Códigos Gerados</p>
-                        <Button size="sm" variant="ghost" onClick={copyAllCodes} className="text-muted-foreground hover:text-foreground">
-                          <Copy className="w-3 h-3 mr-1" />
-                          Copiar todos
-                        </Button>
-                      </div>
-                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                        {generatedCodes.map((code, i) => (
-                          <div key={i} className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
-                            <code className="text-sm font-mono text-foreground">{code}</code>
-                            <Button size="sm" variant="ghost" onClick={() => copyToClipboard(code)} className="text-muted-foreground hover:text-foreground h-6 w-6 p-0">
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between">
+                      <p className="text-sm text-emerald-400">{generatedCodes.length} voucher(s) gerados com sucesso</p>
+                      <Button size="sm" variant="ghost" onClick={copyAllCodes} className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copiar todos
+                      </Button>
                     </div>
                   )}
                 </CardContent>
