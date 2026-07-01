@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { registerWifiUser, loginWifiUser, loginWithVoucher } from '@/app/actions/wifi'
+import { ThemeToggle } from '@/components/theme-toggle'
 import type { ArubaRedirectParams } from '@/lib/aruba'
 
 interface PortalSettings {
@@ -15,6 +16,7 @@ interface PortalSettings {
   portalSubtitle: string | null
   logoUrl: string | null
   backgroundUrl: string | null
+  backgroundColor: string | null
   primaryColor: string | null
   termsText: string | null
 }
@@ -147,18 +149,24 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
 
   const primaryColor = settings.primaryColor || '#3b82f6'
 
-  // Custom background image (falls back to the default gradient when empty)
+  // Background priority: custom image > solid color > default gradient
+  const baseBgClass = 'min-h-screen flex items-center justify-center p-4'
   const bgClass = settings.backgroundUrl
-    ? 'min-h-screen flex items-center justify-center p-4 bg-cover bg-center'
-    : 'min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
+    ? `${baseBgClass} bg-cover bg-center`
+    : settings.backgroundColor
+      ? baseBgClass
+      : `${baseBgClass} bg-gradient-to-br from-background via-muted to-background`
   const bgStyle = settings.backgroundUrl
     ? { backgroundImage: `url(${settings.backgroundUrl})` }
-    : undefined
+    : settings.backgroundColor
+      ? { backgroundColor: settings.backgroundColor }
+      : undefined
 
   if (success) {
     return (
       <div className={bgClass} style={bgStyle}>
-        <Card className="w-full max-w-md border-0 shadow-2xl bg-white/95 backdrop-blur">
+        <ThemeToggle className="fixed top-4 right-4 z-10 bg-card/80 backdrop-blur" />
+        <Card className="w-full max-w-md border-0 shadow-2xl bg-card/95 backdrop-blur">
           <CardContent className="pt-8 pb-8 text-center">
             <div 
               className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
@@ -166,9 +174,9 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
             >
               <Wifi className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">Conectado!</h2>
-            <p className="text-slate-600">{success}</p>
-            <p className="text-sm text-slate-500 mt-4">Redirecionando...</p>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Conectado!</h2>
+            <p className="text-muted-foreground">{success}</p>
+            <p className="text-sm text-muted-foreground mt-4">Redirecionando...</p>
           </CardContent>
         </Card>
       </div>
@@ -177,7 +185,8 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
 
   return (
     <div className={bgClass} style={bgStyle}>
-      <Card className="w-full max-w-md border-0 shadow-2xl bg-white/95 backdrop-blur">
+      <ThemeToggle className="fixed top-4 right-4 z-10 bg-card/80 backdrop-blur" />
+      <Card className="w-full max-w-md border-0 shadow-2xl bg-card/95 backdrop-blur">
         <CardHeader className="text-center pb-2">
           {settings.logoUrl ? (
             <img 
@@ -193,23 +202,23 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
               <Wifi className="w-8 h-8 text-white" />
             </div>
           )}
-          <CardTitle className="text-2xl font-bold text-slate-900">
+          <CardTitle className="text-2xl font-bold text-foreground">
             {settings.portalTitle || 'WiFi Gratuito'}
           </CardTitle>
-          <CardDescription className="text-slate-600">
+          <CardDescription className="text-muted-foreground">
             {ssid ? `Rede: ${ssid}` : (settings.portalSubtitle || 'Conecte-se à nossa rede')}
           </CardDescription>
         </CardHeader>
         
         <CardContent>
           {!macAddress && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm">
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-600 dark:text-amber-400 text-sm">
               Aviso: MAC address não detectado. O acesso pode não ser autorizado automaticamente.
             </div>
           )}
           
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
               {error}
             </div>
           )}
@@ -224,14 +233,14 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email" className="text-slate-700">Email</Label>
+                  <Label htmlFor="login-email" className="text-foreground">Email</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="login-email"
                       type="email"
                       placeholder="seu@email.com"
-                      className="pl-10 !bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                      className="pl-10"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       required
@@ -239,14 +248,14 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password" className="text-slate-700">Senha</Label>
+                  <Label htmlFor="login-password" className="text-foreground">Senha</Label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="login-password"
                       type="password"
                       placeholder="Sua senha"
-                      className="pl-10 !bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                      className="pl-10"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       required
@@ -272,59 +281,59 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="register-name" className="text-slate-700">Nome completo</Label>
+                  <Label htmlFor="register-name" className="text-foreground">Nome completo</Label>
                   <Input
                     id="register-name"
                     type="text"
                     placeholder="Seu nome"
-                    className="!bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                    className="!bg-white !text-foreground !border-slate-300 placeholder:!text-muted-foreground"
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-email" className="text-slate-700">Email</Label>
+                  <Label htmlFor="register-email" className="text-foreground">Email</Label>
                   <Input
                     id="register-email"
                     type="email"
                     placeholder="seu@email.com"
-                    className="!bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                    className="!bg-white !text-foreground !border-slate-300 placeholder:!text-muted-foreground"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-phone" className="text-slate-700">Telefone (opcional)</Label>
+                  <Label htmlFor="register-phone" className="text-foreground">Telefone (opcional)</Label>
                   <Input
                     id="register-phone"
                     type="tel"
                     placeholder="(00) 00000-0000"
-                    className="!bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                    className="!bg-white !text-foreground !border-slate-300 placeholder:!text-muted-foreground"
                     value={registerPhone}
                     onChange={(e) => setRegisterPhone(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-password" className="text-slate-700">Senha</Label>
+                  <Label htmlFor="register-password" className="text-foreground">Senha</Label>
                   <Input
                     id="register-password"
                     type="password"
                     placeholder="Mínimo 6 caracteres"
-                    className="!bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                    className="!bg-white !text-foreground !border-slate-300 placeholder:!text-muted-foreground"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-confirm" className="text-slate-700">Confirmar senha</Label>
+                  <Label htmlFor="register-confirm" className="text-foreground">Confirmar senha</Label>
                   <Input
                     id="register-confirm"
                     type="password"
                     placeholder="Confirme sua senha"
-                    className="!bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                    className="!bg-white !text-foreground !border-slate-300 placeholder:!text-muted-foreground"
                     value={registerConfirmPassword}
                     onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                     required
@@ -349,21 +358,21 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
             <TabsContent value="voucher">
               <form onSubmit={handleVoucher} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="voucher-code" className="text-slate-700">Código de acesso</Label>
+                  <Label htmlFor="voucher-code" className="text-foreground">Código de acesso</Label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="voucher-code"
                       type="text"
                       placeholder="Digite o código"
-                      className="pl-10 uppercase font-mono tracking-wider !bg-white !text-slate-900 !border-slate-300 placeholder:!text-slate-400"
+                      className="pl-10 uppercase font-mono tracking-wider"
                       value={voucherCode}
                       onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
                       required
                     />
                   </div>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Insira o código fornecido pelo estabelecimento
                 </p>
                 <Button 
@@ -384,11 +393,11 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
           </Tabs>
 
           {settings.termsText && (
-            <p className="text-xs text-slate-500 text-center mt-6">
+            <p className="text-xs text-muted-foreground text-center mt-6">
               Ao conectar, você concorda com os{' '}
               <button 
                 type="button"
-                className="underline hover:text-slate-700"
+                className="underline hover:text-foreground text-muted-foreground"
                 onClick={() => alert(settings.termsText)}
               >
                 termos de uso

@@ -69,6 +69,7 @@ export const updatePortalSettingsSchema = z.object({
   portalSubtitle: z.string().max(500).optional().nullable(),
   logoUrl: z.string().max(500).optional().nullable(),
   backgroundUrl: z.string().max(500).optional().nullable(),
+  backgroundColor: z.string().max(20).optional().nullable(),
   primaryColor: z.string().max(20).optional().nullable(),
   secondaryColor: z.string().max(20).optional().nullable(),
   termsText: z.string().max(5000).optional().nullable(),

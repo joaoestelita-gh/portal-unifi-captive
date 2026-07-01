@@ -94,6 +94,7 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
         portalSubtitle: settings.portalSubtitle,
         logoUrl: settings.logoUrl,
         backgroundUrl: settings.backgroundUrl,
+        backgroundColor: settings.backgroundColor,
         primaryColor: settings.primaryColor,
         termsText: settings.termsText,
       }}

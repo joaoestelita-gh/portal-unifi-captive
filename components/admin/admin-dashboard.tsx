@@ -120,6 +120,7 @@ interface PortalSettings {
   portalSubtitle: string | null
   logoUrl: string | null
   backgroundUrl: string | null
+  backgroundColor: string | null
   primaryColor: string | null
   secondaryColor: string | null
   termsText: string | null
@@ -206,6 +207,7 @@ export function AdminDashboard({
   const [portalSubtitle, setPortalSubtitle] = useState(settings.portalSubtitle || '')
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '')
   const [backgroundUrl, setBackgroundUrl] = useState(settings.backgroundUrl || '')
+  const [backgroundColor, setBackgroundColor] = useState(settings.backgroundColor || '')
   const [termsText, setTermsText] = useState(settings.termsText || '')
   const [successRedirectUrl, setSuccessRedirectUrl] = useState(settings.successRedirectUrl || 'https://google.com')
   const [defaultSession, setDefaultSession] = useState(String(settings.defaultSessionMinutes || 120))
@@ -300,6 +302,7 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
       portalSubtitle,
       logoUrl: logoUrl || null,
       backgroundUrl: backgroundUrl || null,
+      backgroundColor: backgroundColor || null,
       termsText,
       successRedirectUrl,
       defaultSessionMinutes: defaultSessionUnlimited ? 0 : parseInt(defaultSession),
@@ -1938,6 +1941,38 @@ const result = await updateWifiUser(editingUser.id, {
                     placeholder="https://exemplo.com/fundo.jpg"
                     hint="Fundo da tela de login do portal. Deixe vazio para usar o padrao"
                   />
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Cor de Fundo</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        aria-label="Selecionar cor de fundo"
+                        value={backgroundColor || '#0f172a'}
+                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-border/50 bg-transparent p-1"
+                      />
+                      <Input
+                        value={backgroundColor}
+                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        placeholder="#0f172a"
+                        className="bg-secondary/50 border-border/50 focus:border-primary font-mono"
+                      />
+                      {backgroundColor && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setBackgroundColor('')}
+                          className="shrink-0 bg-transparent"
+                        >
+                          Limpar
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Cor sólida da tela de login. Usada quando não há imagem de fundo. Deixe vazio para usar o gradiente padrão.
+                    </p>
+                  </div>
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">Termos de Uso</Label>
                     <Textarea
