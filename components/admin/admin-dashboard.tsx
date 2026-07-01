@@ -25,7 +25,8 @@ import {
   Eye,
   EyeOff,
   Pencil,
-  BookOpen
+  BookOpen,
+  Smartphone
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -57,6 +58,11 @@ import {
   updateWifiUser,
   setTrustedDevice,
   removeTrustedDevice,
+  getUserDevices,
+  setDeviceTrusted,
+  removeDeviceTrust,
+  renameDevice,
+  removeDevice,
 } from '@/app/actions/wifi'
 import { ControllerSetup } from './controller-setup'
 import { ImageUpload } from './image-upload'
@@ -257,6 +263,15 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
   const [showEditPassword, setShowEditPassword] = useState(false)
   const [editUserError, setEditUserError] = useState('')
   const [editTrustedDuration, setEditTrustedDuration] = useState('permanent')
+  const [editUserDevices, setEditUserDevices] = useState<Array<{
+    id: string
+    macAddress: string
+    deviceName: string | null
+    trusted: boolean
+    trustedUntil: Date | null
+    lastSeen: Date
+  }>>([])
+  const [deviceTrustDuration, setDeviceTrustDuration] = useState<Record<string, string>>({})
   
   const handleLogout = async () => {
     await logoutAdmin()
@@ -449,7 +464,7 @@ window.location.reload()
     }
   }
 
-  const openEditUser = (user: WifiUser) => {
+  const openEditUser = async (user: WifiUser) => {
     setEditingUser(user)
     setEditUserName(user.name)
     setEditUserEmail(user.email)
@@ -462,6 +477,10 @@ window.location.reload()
     setEditUserPassword('')
     setEditUserError('')
     setShowEditPassword(false)
+    // Load user devices
+    const devices = await getUserDevices(user.id)
+    setEditUserDevices(devices)
+    setDeviceTrustDuration({})
   }
 
   const handleUpdateUser = async () => {
@@ -1288,26 +1307,87 @@ const result = await updateWifiUser(editingUser.id, {
                     </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label className="text-muted-foreground flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-blue-400" />
-                        Dispositivo Confiável
+                        <Smartphone className="w-4 h-4 text-blue-400" />
+                        Dispositivos ({editUserDevices.length}/3)
                       </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {editingUser?.trusted 
-                          ? `Este dispositivo está marcado como confiável${editingUser.trustedUntil ? ` até ${new Date(editingUser.trustedUntil).toLocaleDateString('pt-BR')}` : ' (permanente)'}. Reconecta automaticamente sem login.`
-                          : 'Marcar como confiável permite que o dispositivo reconecte sem fazer login novamente.'
-                        }
-                      </p>
-                      {!editingUser?.trusted && (
-                        <select
-                          value={editTrustedDuration}
-                          onChange={(e) => setEditTrustedDuration(e.target.value)}
-                          className="w-full rounded-md border border-border/50 bg-secondary/50 px-3 py-2 text-sm text-foreground"
-                        >
-                          <option value="permanent">Permanente</option>
-                          <option value="7days">7 dias</option>
-                          <option value="30days">30 dias</option>
-                          <option value="90days">90 dias</option>
-                        </select>
+                      {editUserDevices.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Nenhum dispositivo registrado. O MAC é salvo automaticamente quando o usuário faz login pelo portal.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {editUserDevices.map((device) => (
+                            <div key={device.id} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30 border border-border/30">
+                              <Smartphone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-mono text-foreground truncate">{device.macAddress}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {device.deviceName || 'Sem nome'} · Visto {new Date(device.lastSeen).toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                              {device.trusted ? (
+                                <div className="flex items-center gap-1">
+                                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
+                                    <Shield className="w-3 h-3 mr-1" />
+                                    Confiável
+                                  </Badge>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                    title="Remover confiança"
+                                    onClick={async () => {
+                                      await removeDeviceTrust(device.id)
+                                      const devices = await getUserDevices(editingUser!.id)
+                                      setEditUserDevices(devices)
+                                    }}
+                                  >
+                                    <XCircle className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <select
+                                    value={deviceTrustDuration[device.id] || 'permanent'}
+                                    onChange={(e) => setDeviceTrustDuration(prev => ({ ...prev, [device.id]: e.target.value }))}
+                                    className="h-7 rounded border border-border/50 bg-secondary/50 px-1 text-xs text-foreground"
+                                  >
+                                    <option value="permanent">Permanente</option>
+                                    <option value="7days">7 dias</option>
+                                    <option value="30days">30 dias</option>
+                                    <option value="90days">90 dias</option>
+                                  </select>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                                    title="Marcar como confiável"
+                                    onClick={async () => {
+                                      await setDeviceTrusted(device.id, deviceTrustDuration[device.id] || 'permanent')
+                                      const devices = await getUserDevices(editingUser!.id)
+                                      setEditUserDevices(devices)
+                                    }}
+                                  >
+                                    <Shield className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                title="Remover dispositivo"
+                                onClick={async () => {
+                                  await removeDevice(device.id)
+                                  const devices = await getUserDevices(editingUser!.id)
+                                  setEditUserDevices(devices)
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1316,34 +1396,6 @@ const result = await updateWifiUser(editingUser.id, {
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Salvar Alteracoes
                       </Button>
-                      {editingUser.status === 'approved' && !editingUser.trusted && (
-                        <Button 
-                          variant="outline" 
-                          className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
-                          onClick={async () => { 
-                            await setTrustedDevice(editingUser.id, editTrustedDuration)
-                            setEditingUser(null)
-                            window.location.reload()
-                          }}
-                        >
-                          <Shield className="w-4 h-4 mr-2" />
-                          Confiar
-                        </Button>
-                      )}
-                      {editingUser.trusted && (
-                        <Button 
-                          variant="outline" 
-                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                          onClick={async () => { 
-                            await removeTrustedDevice(editingUser.id)
-                            setEditingUser(null)
-                            window.location.reload()
-                          }}
-                        >
-                          <Shield className="w-4 h-4 mr-2" />
-                          Remover Confiança
-                        </Button>
-                      )}
                       <Button variant="outline" onClick={() => setEditingUser(null)}>
                         Cancelar
                       </Button>
