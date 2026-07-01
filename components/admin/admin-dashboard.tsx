@@ -55,6 +55,8 @@ import {
   updatePortalSettings,
   createWifiUserByAdmin,
   updateWifiUser,
+  setTrustedDevice,
+  removeTrustedDevice,
 } from '@/app/actions/wifi'
 import { ControllerSetup } from './controller-setup'
 import { ImageUpload } from './image-upload'
@@ -78,6 +80,8 @@ interface WifiUser {
   speedLimitDown: number | null
   speedLimitUp: number | null
   totalTimeUsedToday: number | null
+  trusted: boolean
+  trustedUntil: Date | null
   createdAt: Date
 }
 
@@ -1069,7 +1073,17 @@ const result = await updateWifiUser(editingUser.id, {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>{getStatusBadge(user.status)}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {getStatusBadge(user.status)}
+                                {user.trusted && (
+                                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30">
+                                    <Shield className="w-3 h-3 mr-1" />
+                                    Confiável
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-muted-foreground">{user.dailyLimitMinutes || 240} min</TableCell>
                             <TableCell className="text-muted-foreground">{user.totalTimeUsedToday || 0} min</TableCell>
                             <TableCell className="text-right">
@@ -1102,6 +1116,28 @@ const result = await updateWifiUser(editingUser.id, {
                                     onClick={() => approveUser(user.id)}
                                   >
                                     <CheckCircle className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {user.status === 'approved' && !user.trusted && user.macAddress && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                                    title="Marcar como dispositivo confiável"
+                                    onClick={async () => { await setTrustedDevice(user.id, 'permanent'); window.location.reload() }}
+                                  >
+                                    <Shield className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {user.trusted && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-blue-300 hover:text-red-300 hover:bg-red-500/10 bg-blue-500/10"
+                                    title="Remover confiança do dispositivo"
+                                    onClick={async () => { await removeTrustedDevice(user.id); window.location.reload() }}
+                                  >
+                                    <Shield className="w-4 h-4" />
                                   </Button>
                                 )}
 <Button

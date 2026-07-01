@@ -70,6 +70,9 @@ export const wifiUsers = pgTable('wifi_users', {
   speedLimitUp: integer('speedLimitUp').default(5120), // Kbps
   totalTimeUsedToday: integer('totalTimeUsedToday').default(0),
   lastResetDate: date('lastResetDate').defaultNow(),
+  // Dispositivos confiáveis: se trusted=true, o MAC reconecta sem login
+  trusted: boolean('trusted').notNull().default(false),
+  trustedUntil: timestamp('trustedUntil'), // null = permanente, com data = expira naquele momento
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 }, (table) => [
