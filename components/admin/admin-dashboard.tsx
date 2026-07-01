@@ -256,6 +256,7 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
   const [editUserSessionUnlimited, setEditUserSessionUnlimited] = useState(false)
   const [showEditPassword, setShowEditPassword] = useState(false)
   const [editUserError, setEditUserError] = useState('')
+  const [editTrustedDuration, setEditTrustedDuration] = useState('permanent')
   
   const handleLogout = async () => {
     await logoutAdmin()
@@ -1118,7 +1119,7 @@ const result = await updateWifiUser(editingUser.id, {
                                     <CheckCircle className="w-4 h-4" />
                                   </Button>
                                 )}
-                                {user.status === 'approved' && !user.trusted && user.macAddress && (
+                                {user.status === 'approved' && !user.trusted && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -1285,12 +1286,64 @@ const result = await updateWifiUser(editingUser.id, {
                         className="bg-secondary/50 border-border/50 disabled:opacity-50"
                       />
                     </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label className="text-muted-foreground flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-blue-400" />
+                        Dispositivo Confiável
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {editingUser?.trusted 
+                          ? `Este dispositivo está marcado como confiável${editingUser.trustedUntil ? ` até ${new Date(editingUser.trustedUntil).toLocaleDateString('pt-BR')}` : ' (permanente)'}. Reconecta automaticamente sem login.`
+                          : 'Marcar como confiável permite que o dispositivo reconecte sem fazer login novamente.'
+                        }
+                      </p>
+                      {!editingUser?.trusted && (
+                        <select
+                          value={editTrustedDuration}
+                          onChange={(e) => setEditTrustedDuration(e.target.value)}
+                          className="w-full rounded-md border border-border/50 bg-secondary/50 px-3 py-2 text-sm text-foreground"
+                        >
+                          <option value="permanent">Permanente</option>
+                          <option value="7days">7 dias</option>
+                          <option value="30days">30 dias</option>
+                          <option value="90days">90 dias</option>
+                        </select>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2 pt-4">
                       <Button onClick={handleUpdateUser} className="bg-primary hover:bg-primary/90">
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Salvar Alteracoes
                       </Button>
+                      {editingUser.status === 'approved' && !editingUser.trusted && (
+                        <Button 
+                          variant="outline" 
+                          className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                          onClick={async () => { 
+                            await setTrustedDevice(editingUser.id, editTrustedDuration)
+                            setEditingUser(null)
+                            window.location.reload()
+                          }}
+                        >
+                          <Shield className="w-4 h-4 mr-2" />
+                          Confiar
+                        </Button>
+                      )}
+                      {editingUser.trusted && (
+                        <Button 
+                          variant="outline" 
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          onClick={async () => { 
+                            await removeTrustedDevice(editingUser.id)
+                            setEditingUser(null)
+                            window.location.reload()
+                          }}
+                        >
+                          <Shield className="w-4 h-4 mr-2" />
+                          Remover Confiança
+                        </Button>
+                      )}
                       <Button variant="outline" onClick={() => setEditingUser(null)}>
                         Cancelar
                       </Button>
