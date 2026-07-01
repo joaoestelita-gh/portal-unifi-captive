@@ -167,6 +167,12 @@ export function AdminDashboard({
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
 
+  // Pagination state
+  const ITEMS_PER_PAGE = 10
+  const [usersPage, setUsersPage] = useState(1)
+  const [sessionsPage, setSessionsPage] = useState(1)
+  const [vouchersPage, setVouchersPage] = useState(1)
+
   // Auto-refresh state
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -1059,7 +1065,7 @@ const result = await updateWifiUser(editingUser.id, {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-xl border border-border/50 overflow-hidden">
+                <div className="rounded-xl border border-border/50 overflow-hidden max-h-[500px] overflow-y-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/30">
@@ -1078,7 +1084,7 @@ const result = await updateWifiUser(editingUser.id, {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        users.map((user) => (
+                        users.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE).map((user) => (
                           <TableRow key={user.id} className="border-border/30 hover:bg-secondary/20">
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -1184,6 +1190,31 @@ const result = await updateWifiUser(editingUser.id, {
                     </TableBody>
                   </Table>
                 </div>
+                {users.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Mostrando {((usersPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(usersPage * ITEMS_PER_PAGE, users.length)} de {users.length}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={usersPage === 1}
+                        onClick={() => setUsersPage(p => p - 1)}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={usersPage * ITEMS_PER_PAGE >= users.length}
+                        onClick={() => setUsersPage(p => p + 1)}
+                      >
+                        Próxima
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
 </Card>
 
@@ -1417,7 +1448,7 @@ const result = await updateWifiUser(editingUser.id, {
                 <CardDescription>Monitore as conexoes ativas</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-xl border border-border/50 overflow-hidden">
+                <div className="rounded-xl border border-border/50 overflow-hidden max-h-[500px] overflow-y-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/30">
@@ -1436,7 +1467,7 @@ const result = await updateWifiUser(editingUser.id, {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        sessions.map((session) => (
+                        sessions.slice((sessionsPage - 1) * ITEMS_PER_PAGE, sessionsPage * ITEMS_PER_PAGE).map((session) => (
                           <TableRow key={session.id} className="border-border/30 hover:bg-secondary/20">
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -1472,6 +1503,31 @@ const result = await updateWifiUser(editingUser.id, {
                     </TableBody>
                   </Table>
                 </div>
+                {sessions.length > ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Mostrando {((sessionsPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(sessionsPage * ITEMS_PER_PAGE, sessions.length)} de {sessions.length}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={sessionsPage === 1}
+                        onClick={() => setSessionsPage(p => p - 1)}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={sessionsPage * ITEMS_PER_PAGE >= sessions.length}
+                        onClick={() => setSessionsPage(p => p + 1)}
+                      >
+                        Próxima
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1544,7 +1600,7 @@ const result = await updateWifiUser(editingUser.id, {
                   <CardDescription>Lista de todos os vouchers gerados</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="rounded-xl border border-border/50 overflow-hidden">
+                  <div className="rounded-xl border border-border/50 overflow-hidden max-h-[500px] overflow-y-auto">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/30">
@@ -1562,7 +1618,7 @@ const result = await updateWifiUser(editingUser.id, {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          vouchers.map((voucher) => (
+                          vouchers.slice((vouchersPage - 1) * ITEMS_PER_PAGE, vouchersPage * ITEMS_PER_PAGE).map((voucher) => (
                             <TableRow key={voucher.id} className="border-border/30 hover:bg-secondary/20">
                               <TableCell>
                                 <div className="flex items-center gap-2">
@@ -1597,6 +1653,31 @@ const result = await updateWifiUser(editingUser.id, {
                       </TableBody>
                     </Table>
                   </div>
+                  {vouchers.length > ITEMS_PER_PAGE && (
+                    <div className="flex items-center justify-between pt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Mostrando {((vouchersPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(vouchersPage * ITEMS_PER_PAGE, vouchers.length)} de {vouchers.length}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={vouchersPage === 1}
+                          onClick={() => setVouchersPage(p => p - 1)}
+                        >
+                          Anterior
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={vouchersPage * ITEMS_PER_PAGE >= vouchers.length}
+                          onClick={() => setVouchersPage(p => p + 1)}
+                        >
+                          Próxima
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
