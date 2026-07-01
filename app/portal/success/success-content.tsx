@@ -42,36 +42,36 @@ export function SuccessContent({ sessionMinutes, userName, redirectUrl }: Succes
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/95 backdrop-blur shadow-2xl border-0">
+      <Card className="w-full max-w-md bg-card/95 backdrop-blur shadow-2xl border-0">
         <CardContent className="pt-8 pb-6 px-6 text-center">
           {/* Success Icon */}
-          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-12 h-12 text-emerald-600" />
+          <div className="w-20 h-20 bg-emerald-500/15 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
           </div>
           
           {/* Success Message */}
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">
+          <h1 className="text-2xl font-bold text-foreground mb-2">
             Conectado com Sucesso!
           </h1>
-          <p className="text-slate-600 mb-6">
-            Ola, <span className="font-semibold">{userName}</span>! Voce esta conectado a rede WiFi.
+          <p className="text-muted-foreground mb-6">
+            Olá, <span className="font-semibold text-foreground">{userName}</span>! Você está conectado à rede WiFi.
           </p>
           
           {/* Session Info */}
-          <div className="bg-slate-50 rounded-xl p-4 mb-6 space-y-3">
+          <div className="bg-muted rounded-xl p-4 mb-6 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Wifi className="w-5 h-5" />
                 <span>Status</span>
               </div>
-              <span className="font-semibold text-emerald-600">Ativo</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">Ativo</span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-600">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="w-5 h-5" />
-                <span>Tempo de Sessao</span>
+                <span>Tempo de Sessão</span>
               </div>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-foreground">
                 {formatTime(parseInt(sessionMinutes))}
               </span>
             </div>
@@ -88,15 +88,15 @@ export function SuccessContent({ sessionMinutes, userName, redirectUrl }: Succes
           
           {/* Auto-redirect notice */}
           {countdown > 0 && (
-            <p className="text-sm text-slate-500 mt-4">
+            <p className="text-sm text-muted-foreground mt-4">
               Redirecionando automaticamente em {countdown} segundos...
             </p>
           )}
           
           {/* Tips */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <p className="text-xs text-slate-500">
-              Dica: Se a conexao nao funcionar, tente desligar e ligar o WiFi do seu dispositivo.
+          <div className="mt-6 pt-6 border-t border-border">
+            <p className="text-xs text-muted-foreground">
+              Dica: Se a conexão não funcionar, tente desligar e ligar o WiFi do seu dispositivo.
             </p>
           </div>
         </CardContent>
