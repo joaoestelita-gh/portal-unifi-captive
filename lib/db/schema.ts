@@ -154,6 +154,7 @@ export const portalSettings = pgTable('portal_settings', {
   portalSubtitle: text('portalSubtitle').default('Conecte-se à nossa rede'),
   logoUrl: text('logoUrl'),
   backgroundUrl: text('backgroundUrl'),
+  backgroundColor: text('backgroundColor'),
   primaryColor: text('primaryColor').default('#3b82f6'),
   secondaryColor: text('secondaryColor').default('#1e40af'),
   termsText: text('termsText'),

@@ -16,6 +16,7 @@ interface PortalSettings {
   portalSubtitle: string | null
   logoUrl: string | null
   backgroundUrl: string | null
+  backgroundColor: string | null
   primaryColor: string | null
   termsText: string | null
 }
@@ -148,13 +149,18 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
 
   const primaryColor = settings.primaryColor || '#3b82f6'
 
-  // Custom background image (falls back to the default gradient when empty)
+  // Background priority: custom image > solid color > default gradient
+  const baseBgClass = 'min-h-screen flex items-center justify-center p-4'
   const bgClass = settings.backgroundUrl
-    ? 'min-h-screen flex items-center justify-center p-4 bg-cover bg-center'
-    : 'min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-muted to-background'
+    ? `${baseBgClass} bg-cover bg-center`
+    : settings.backgroundColor
+      ? baseBgClass
+      : `${baseBgClass} bg-gradient-to-br from-background via-muted to-background`
   const bgStyle = settings.backgroundUrl
     ? { backgroundImage: `url(${settings.backgroundUrl})` }
-    : undefined
+    : settings.backgroundColor
+      ? { backgroundColor: settings.backgroundColor }
+      : undefined
 
   if (success) {
     return (
