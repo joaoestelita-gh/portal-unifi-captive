@@ -66,6 +66,7 @@ import {
 } from '@/app/actions/wifi'
 import { ControllerSetup } from './controller-setup'
 import { ImageUpload } from './image-upload'
+import { VoucherPrintButtons } from './voucher-print'
 
 interface DashboardStats {
   totalUsers: number
@@ -1593,11 +1594,19 @@ const result = await updateWifiUser(editingUser.id, {
 
               <Card className="lg:col-span-2 bg-card/50 border-border/50">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Ticket className="w-5 h-5 text-violet-500" />
-                    Vouchers Existentes
-                  </CardTitle>
-                  <CardDescription>Lista de todos os vouchers gerados</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Ticket className="w-5 h-5 text-violet-500" />
+                        Vouchers Existentes
+                      </CardTitle>
+                      <CardDescription>Lista de todos os vouchers gerados</CardDescription>
+                    </div>
+                    <VoucherPrintButtons
+                      vouchers={vouchers}
+                      portalTitle={settings.portalTitle || 'WiFi'}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-xl border border-border/50 overflow-hidden max-h-[500px] overflow-y-auto">
