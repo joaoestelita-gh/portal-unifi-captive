@@ -1598,9 +1598,9 @@ const result = await updateWifiUser(editingUser.id, {
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <Ticket className="w-5 h-5 text-violet-500" />
-                        Vouchers Existentes
+                        Vouchers Disponíveis
                       </CardTitle>
-                      <CardDescription>Lista de todos os vouchers gerados</CardDescription>
+                      <CardDescription>{vouchers.filter(v => (v.usedCount || 0) < (v.maxUses || 1)).length} voucher(s) disponíveis para uso</CardDescription>
                     </div>
                     <VoucherPrintButtons
                       vouchers={vouchers}
@@ -1620,14 +1620,14 @@ const result = await updateWifiUser(editingUser.id, {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {vouchers.length === 0 ? (
+                        {vouchers.filter(v => (v.usedCount || 0) < (v.maxUses || 1)).length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                              Nenhum voucher gerado
+                              Nenhum voucher disponível
                             </TableCell>
                           </TableRow>
                         ) : (
-                          vouchers.slice((vouchersPage - 1) * ITEMS_PER_PAGE, vouchersPage * ITEMS_PER_PAGE).map((voucher) => (
+                          vouchers.filter(v => (v.usedCount || 0) < (v.maxUses || 1)).slice((vouchersPage - 1) * ITEMS_PER_PAGE, vouchersPage * ITEMS_PER_PAGE).map((voucher) => (
                             <TableRow key={voucher.id} className="border-border/30 hover:bg-secondary/20">
                               <TableCell>
                                 <div className="flex items-center gap-2">
@@ -1662,10 +1662,10 @@ const result = await updateWifiUser(editingUser.id, {
                       </TableBody>
                     </Table>
                   </div>
-                  {vouchers.length > ITEMS_PER_PAGE && (
+                  {vouchers.filter(v => (v.usedCount || 0) < (v.maxUses || 1)).length > ITEMS_PER_PAGE && (
                     <div className="flex items-center justify-between pt-4">
                       <p className="text-sm text-muted-foreground">
-                        Mostrando {((vouchersPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(vouchersPage * ITEMS_PER_PAGE, vouchers.length)} de {vouchers.length}
+                        Mostrando {((vouchersPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(vouchersPage * ITEMS_PER_PAGE, vouchers.filter(v => (v.usedCount || 0) < (v.maxUses || 1)).length)} de {vouchers.filter(v => (v.usedCount || 0) < (v.maxUses || 1)).length} disponíveis
                       </p>
                       <div className="flex gap-2">
                         <Button
@@ -1679,7 +1679,7 @@ const result = await updateWifiUser(editingUser.id, {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={vouchersPage * ITEMS_PER_PAGE >= vouchers.length}
+                          disabled={vouchersPage * ITEMS_PER_PAGE >= vouchers.filter(v => (v.usedCount || 0) < (v.maxUses || 1)).length}
                           onClick={() => setVouchersPage(p => p + 1)}
                         >
                           Próxima
