@@ -1068,7 +1068,7 @@ const result = await updateWifiUser(editingUser.id, {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-xl border border-border/50 overflow-hidden max-h-[500px] overflow-y-auto">
+                <div className="rounded-xl border border-border/50 overflow-hidden max-h-[300px] overflow-y-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/30">
