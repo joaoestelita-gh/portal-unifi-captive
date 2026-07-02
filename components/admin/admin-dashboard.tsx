@@ -17,6 +17,7 @@ import {
   Copy,
   Activity,
   Shield,
+  LockOpen,
   Zap,
   TrendingUp,
   Ban,
@@ -1110,7 +1111,7 @@ const result = await updateWifiUser(editingUser.id, {
                                 {getStatusBadge(user.status)}
                                 {user.trusted && (
                                   <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30">
-                                    <Shield className="w-3 h-3 mr-1" />
+                                    <LockOpen className="w-3 h-3 mr-1" />
                                     Confiável
                                   </Badge>
                                 )}
@@ -1158,7 +1159,7 @@ const result = await updateWifiUser(editingUser.id, {
                                     title="Marcar como dispositivo confiável"
                                     onClick={async () => { await setTrustedDevice(user.id, 'permanent'); router.refresh() }}
                                   >
-                                    <Shield className="w-4 h-4" />
+                                    <LockOpen className="w-4 h-4" />
                                   </Button>
                                 )}
                                 {user.trusted && (
@@ -1169,7 +1170,7 @@ const result = await updateWifiUser(editingUser.id, {
                                     title="Remover confiança do dispositivo"
                                     onClick={async () => { await removeTrustedDevice(user.id); router.refresh() }}
                                   >
-                                    <Shield className="w-4 h-4" />
+                                    <LockOpen className="w-4 h-4" />
                                   </Button>
                                 )}
 <Button
