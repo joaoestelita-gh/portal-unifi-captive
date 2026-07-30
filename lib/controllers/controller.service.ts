@@ -26,7 +26,6 @@ import type { WifiControllerAdapter, ControllerCapability } from './wifi-control
 import type {
   ControllerType,
   ControllerConfig,
-  ControllerCredentials,
   AuthorizeGuestParams,
   AuthorizeGuestResult,
   DeauthorizeGuestParams,

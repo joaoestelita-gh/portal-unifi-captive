@@ -1,5 +1,26 @@
 'use client'
 
+/**
+ * AdminDashboard — Componente principal do painel administrativo.
+ *
+ * Renderiza a interface completa de administração do portal WiFi, incluindo:
+ * - Visão geral (stats cards + resumos)
+ * - Gerenciamento de usuários WiFi (CRUD + trust + devices)
+ * - Monitoramento de sessões ativas
+ * - Geração e gerenciamento de vouchers
+ * - Analytics (delegado ao AnalyticsTab)
+ * - Gerenciamento de administradores
+ * - Configurações do portal (aparência, limites padrão)
+ * - Integração com controladora (delegado ao ControllerSetup)
+ *
+ * @note Este componente contém estado compartilhado entre tabs
+ *       (editingUser, editingAdmin, etc.), o que dificulta a extração
+ *       individual de cada tab sem refatoração significativa da gestão de estado.
+ *
+ * @see AnalyticsTab — Analytics delegado a componente separado
+ * @see ControllerSetup — Configuração de controladora delegada a componente separado
+ */
+
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
