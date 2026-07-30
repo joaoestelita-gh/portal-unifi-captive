@@ -50,12 +50,20 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
   // Voucher form
   const [voucherCode, setVoucherCode] = useState('')
 
+  // LGPD consent
+  const [lgpdAccepted, setLgpdAccepted] = useState(false)
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (settings.termsText && !lgpdAccepted) {
+      setError('Você precisa aceitar os termos de uso para continuar.')
+      return
+    }
     setLoading(true)
     setError(null)
     
-    const result = await loginWifiUser(loginEmail, loginPassword, macAddress, detectedController, arubaParams)
+    const sessionMeta = { apName: undefined, ssid: ssid || undefined, lgpdAccepted }
+    const result = await loginWifiUser(loginEmail, loginPassword, macAddress, detectedController, arubaParams, sessionMeta)
     
     if (result.success) {
       // Build success page URL with parameters
@@ -119,10 +127,15 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
 
   const handleVoucher = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (settings.termsText && !lgpdAccepted) {
+      setError('Você precisa aceitar os termos de uso para continuar.')
+      return
+    }
     setLoading(true)
     setError(null)
     
-    const result = await loginWithVoucher(voucherCode, macAddress, detectedController, arubaParams)
+    const sessionMeta = { apName: undefined, ssid: ssid || undefined, lgpdAccepted }
+    const result = await loginWithVoucher(voucherCode, macAddress, detectedController, arubaParams, sessionMeta)
     
     if (result.success) {
       // Build success page URL with parameters
@@ -390,16 +403,27 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
           </Tabs>
 
           {settings.termsText && (
-            <p className="text-xs text-muted-foreground text-center mt-6">
-              Ao conectar, você concorda com os{' '}
-              <button 
-                type="button"
-                className="underline hover:text-foreground text-muted-foreground"
-                onClick={() => alert(settings.termsText)}
-              >
-                termos de uso
-              </button>
-            </p>
+            <div className="mt-6 space-y-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={lgpdAccepted}
+                  onChange={(e) => setLgpdAccepted(e.target.checked)}
+                  className="mt-1 rounded border-border"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Li e aceito os{' '}
+                  <button 
+                    type="button"
+                    className="underline hover:text-foreground text-muted-foreground"
+                    onClick={() => alert(settings.termsText)}
+                  >
+                    termos de uso e política de privacidade
+                  </button>
+                  . Autorizo a coleta e tratamento dos meus dados conforme a LGPD.
+                </span>
+              </label>
+            </div>
           )}
         </CardContent>
       </Card>

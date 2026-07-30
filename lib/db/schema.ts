@@ -85,6 +85,10 @@ export const wifiSessions = pgTable('wifi_sessions', {
   wifiUserId: text('wifiUserId'),
   macAddress: text('macAddress').notNull(),
   ipAddress: text('ipAddress'),
+  apName: text('apName'),            // Nome/MAC do AP que redirecionou
+  ssid: text('ssid'),                // Rede WiFi que o cliente conectou
+  site: text('site'),                // Site/local do controller
+  lgpdAcceptedAt: timestamp('lgpdAcceptedAt'), // Momento do aceite LGPD
   startTime: timestamp('startTime').notNull().defaultNow(),
   expectedEndTime: timestamp('expectedEndTime'),
   endTime: timestamp('endTime'),
