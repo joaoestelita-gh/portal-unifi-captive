@@ -30,6 +30,9 @@ export { ControllerFactory } from './controller.factory'
 // Interface (para tipagem em parâmetros)
 export type { WifiControllerAdapter, ControllerCapability } from './wifi-controller.adapter'
 
+// Adapter-specific exports (Aruba redirect params)
+export type { ArubaRedirectParams, ArubaAuthCredentials } from './adapters/aruba.adapter'
+
 // Types (domínio compartilhado)
 export type {
   ControllerType,

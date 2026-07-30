@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { registerWifiUser, loginWifiUser, loginWithVoucher } from '@/app/actions/wifi'
-import type { ArubaRedirectParams } from '@/lib/aruba'
+import type { ArubaRedirectParams } from '@/lib/controllers'
 
 interface PortalSettings {
   portalTitle: string | null

@@ -1,20 +1,15 @@
 import { db } from '@/lib/db'
 import { users, sessions } from '@/lib/db/schema'
 import { eq, and, gt } from 'drizzle-orm'
-import bcrypt from 'bcryptjs'
 import { nanoid } from 'nanoid'
 import { cookies } from 'next/headers'
+import { hashPassword, verifyPassword } from '@/lib/crypto'
+
+// Re-export para manter compatibilidade com imports existentes
+export { hashPassword, verifyPassword }
 
 const SESSION_COOKIE_NAME = 'session_token'
 const SESSION_EXPIRY_DAYS = 7
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10)
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash)
-}
 
 export async function createUser(data: {
   email: string
@@ -213,7 +208,7 @@ export async function updateAdmin(adminId: string, data: {
   email?: string
   password?: string
 }) {
-  const updateData: Record<string, unknown> = { updatedAt: new Date() }
+  const updateData: Partial<{ name: string; email: string; password: string; updatedAt: Date }> = { updatedAt: new Date() }
   
   if (data.name) updateData.name = data.name
   if (data.email) updateData.email = data.email
