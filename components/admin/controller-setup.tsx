@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, XCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus } from 'lucide-react'
-import { updateControllerSettings, testControllerConnection, fetchUnifiSites, fetchUnifiSiteInfo } from '@/app/actions/wifi'
+import { updateControllerSettings } from '@/app/actions/wifi'
+import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2 } from '@/app/actions/controller'
 
 interface PortalLog {
   timestamp: string
@@ -155,14 +156,28 @@ const handleTest = async () => {
     setTestResult(null)
     try {
       await handleSave()
-      const result = await testControllerConnection(controllerType)
+      const result = await testUnifiConnectionV2(unifiUrl, unifiUsername, unifiPassword, unifiSite)
       if (result.success) {
-        setTestResult({ success: true, message: result.message || 'Conexão estabelecida!' })
+        const d = result.details
+        const detailParts = []
+        if (d?.model) detailParts.push(`Modelo: ${d.model}`)
+        if (d?.version) detailParts.push(`v${d.version}`)
+        if (d?.status) detailParts.push(`Status: ${d.status}`)
+        if (d?.aps !== undefined) detailParts.push(`${d.aps} AP(s)`)
+        if (d?.switches !== undefined) detailParts.push(`${d.switches} Switch(es)`)
+        if (d?.clientsOnline !== undefined) detailParts.push(`${d.clientsOnline} clientes online`)
+        if (d?.totalSites !== undefined) detailParts.push(`${d.totalSites} site(s)`)
+        
+        const message = detailParts.length > 0
+          ? `Conexão estabelecida! ${detailParts.join(' · ')}`
+          : result.message
+        
+        setTestResult({ success: true, message })
       } else {
-        setTestResult({ success: false, message: result.error || 'Falha na conexão' })
+        setTestResult({ success: false, message: result.message })
       }
-    } catch {
-      setTestResult({ success: false, message: 'Erro ao testar conexão' })
+    } catch (error) {
+      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha inesperada ao testar conexão. Verifique os dados e tente novamente.' })
     }
     setTesting(false)
   }
@@ -177,9 +192,9 @@ const handleTest = async () => {
     setTestResult(null)
     
     try {
-      const result = await fetchUnifiSites(unifiUrl, unifiUsername, unifiPassword)
+      const result = await fetchUnifiSitesV2(unifiUrl, unifiUsername, unifiPassword)
       if (result.success && result.sites.length > 0) {
-        setUnifiSites(result.sites)
+        setUnifiSites(result.sites.map(s => ({ id: s.id, name: s.name, role: 'admin' })))
         setTestResult({ success: true, message: `${result.sites.length} site(s) encontrado(s)!` })
         // Auto-select first site if none selected
         if (!unifiSite || unifiSite === 'default') {
@@ -188,11 +203,11 @@ const handleTest = async () => {
       } else {
         setTestResult({ success: false, message: result.error || 'Nenhum site encontrado' })
       }
-    } catch {
-      setTestResult({ success: false, message: 'Erro ao buscar sites' })
+    } catch (error) {
+      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha ao buscar sites. Verifique as credenciais.' })
     }
     
-setLoadingSites(false)
+    setLoadingSites(false)
   }
 
   const handleFetchSiteInfo = async () => {
@@ -205,15 +220,15 @@ setLoadingSites(false)
     setTestResult(null)
     
     try {
-      const result = await fetchUnifiSiteInfo(unifiUrl, unifiUsername, unifiPassword, unifiSite)
+      const result = await fetchUnifiDetailsV2(unifiUrl, unifiUsername, unifiPassword, unifiSite)
       if (result.success && result.info) {
         setSiteInfo(result.info)
         setTestResult({ success: true, message: 'Informações carregadas!' })
       } else {
-        setTestResult({ success: false, message: result.error || 'Erro ao buscar informações' })
+        setTestResult({ success: false, message: result.error || 'Falha ao buscar informações do site' })
       }
-    } catch {
-      setTestResult({ success: false, message: 'Erro ao buscar informações' })
+    } catch (error) {
+      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha ao buscar informações. Verifique a conexão com o controller.' })
     }
     
     setLoadingInfo(false)

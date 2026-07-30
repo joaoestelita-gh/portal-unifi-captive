@@ -1,0 +1,332 @@
+'use server'
+
+/**
+ * Server Actions — Controladores WiFi
+ *
+ * Estas actions são o ÚNICO ponto de entrada entre a UI e os controladores.
+ * Usam o ControllerService (Facade) que resolve o adapter correto via Factory.
+ *
+ * A UI NUNCA conversa diretamente com a API de nenhum fabricante.
+ */
+
+import { ControllerService, ControllerFactory } from '@/lib/controllers'
+import type { ControllerType, ControllerConfig } from '@/lib/controllers'
+
+// --- Types para a UI ---
+
+interface TestConnectionResponse {
+  success: boolean
+  message: string
+  details?: {
+    model?: string
+    version?: string
+    status?: string
+    siteName?: string
+    totalSites?: number
+    aps?: number
+    switches?: number
+    gateways?: number
+    clientsOnline?: number
+    guestsOnline?: number
+  }
+}
+
+interface FetchSitesResponse {
+  success: boolean
+  sites: Array<{ id: string; name: string; description?: string }>
+  error?: string
+}
+
+interface FetchDetailsResponse {
+  success: boolean
+  error?: string
+  info?: {
+    siteName: string
+    clientCount: number
+    guestCount: number
+    gateway: {
+      name: string
+      model: string
+      ip: string
+      lanIp?: string
+      wanIp?: string
+      version: string
+      uptime: number
+      state: string
+      mac: string
+    } | null
+    wan?: { status: string; ip?: string }
+    wlan?: { status: string; numAp?: number; numGuest?: number }
+    devices: Array<{
+      name: string
+      model: string
+      type: string
+      ip: string
+      mac: string
+      version?: string
+      state: string
+      clients: number
+      guests: number
+    }>
+  }
+}
+
+// --- Helpers ---
+
+function buildUnifiConfig(url: string, username: string, password: string, site: string): ControllerConfig {
+  return {
+    type: 'unifi',
+    baseUrl: url.replace(/\/+$/, ''), // Remove trailing slash
+    credentials: {
+      username,
+      password,
+      site: site || 'default',
+    },
+  }
+}
+
+function getSpecificErrorMessage(error: unknown, controllerType: string): string {
+  const message = error instanceof Error ? error.message : String(error)
+
+  // Erros de rede / DNS
+  if (message.includes('ENOTFOUND') || message.includes('getaddrinfo')) {
+    return `Endereço não encontrado. Verifique se a URL do ${controllerType} está correta e acessível pela rede.`
+  }
+  if (message.includes('ECONNREFUSED')) {
+    return `Conexão recusada. O controlador ${controllerType} não está respondendo neste endereço/porta. Verifique se está ligado e acessível.`
+  }
+  if (message.includes('ETIMEDOUT') || message.includes('timeout') || message.includes('ETIME')) {
+    return `Tempo de conexão esgotado. O controlador ${controllerType} não respondeu. Verifique se o endereço está correto e se há bloqueio de firewall.`
+  }
+  if (message.includes('ECONNRESET')) {
+    return `Conexão interrompida pelo controlador. Verifique se a porta está correta e se o serviço HTTPS está ativo.`
+  }
+  if (message.includes('CERT') || message.includes('certificate') || message.includes('SSL')) {
+    return `Erro de certificado SSL. O controlador usa HTTPS com certificado auto-assinado — isso é normal e já é tratado automaticamente.`
+  }
+
+  // Erros de autenticação
+  if (message.includes('401') || message.includes('Login failed')) {
+    return `Credenciais inválidas. Verifique o usuário e senha do ${controllerType}. Certifique-se de que o usuário tem permissão de administrador.`
+  }
+  if (message.includes('403')) {
+    return `Acesso negado. O usuário não tem permissão suficiente no ${controllerType}. Use uma conta com perfil Admin.`
+  }
+
+  // Erros de endpoint
+  if (message.includes('404')) {
+    return `Endpoint não encontrado. A URL do ${controllerType} pode estar incorreta. Tente usar o formato: https://IP-DO-CONTROLLER`
+  }
+  if (message.includes('502') || message.includes('503')) {
+    return `Serviço indisponível. O ${controllerType} está iniciando ou em manutenção. Aguarde alguns minutos e tente novamente.`
+  }
+
+  // Erro genérico — mas NUNCA apenas "Erro"
+  if (message.includes('Not implemented')) {
+    return `Funcionalidade em implementação para ${controllerType}.`
+  }
+
+  return `Falha na comunicação com ${controllerType}: ${message}`
+}
+
+// --- Actions ---
+
+/**
+ * Testa a conexão com o controlador UniFi.
+ * Retorna informações detalhadas: modelo, versão, APs, switches, clientes.
+ *
+ * Mensagens de erro são SEMPRE específicas sobre o motivo da falha.
+ */
+export async function testUnifiConnectionV2(
+  url: string,
+  username: string,
+  password: string,
+  site: string
+): Promise<TestConnectionResponse> {
+  if (!url || !username || !password) {
+    return {
+      success: false,
+      message: 'Preencha URL, usuário e senha do controlador UniFi.',
+    }
+  }
+
+  const config = buildUnifiConfig(url, username, password, site)
+
+  try {
+    // 1. Testar conexão básica (login + sites)
+    const testResult = await ControllerService.testConnection(
+      {
+        controllerType: 'unifi',
+        unifiEnabled: true,
+        unifiControllerUrl: url,
+        unifiUsername: username,
+        unifiPassword: password,
+        unifiSite: site,
+      },
+      'unifi'
+    )
+
+    if (!testResult.success) {
+      return {
+        success: false,
+        message: getSpecificErrorMessage(new Error(testResult.message), 'UniFi'),
+      }
+    }
+
+    // 2. Buscar dispositivos e clientes para informações detalhadas
+    const adapter = ControllerFactory.create('unifi')
+    const [devices, clients] = await Promise.all([
+      adapter.getDevices(config),
+      adapter.getConnectedClients(config),
+    ])
+
+    const aps = devices.filter(d => d.type === 'ap').length
+    const switches = devices.filter(d => d.type === 'switch').length
+    const gateways = devices.filter(d => d.type === 'gateway').length
+    const gatewayDevice = devices.find(d => d.type === 'gateway')
+    const guestsOnline = clients.filter(c => c.isGuest).length
+
+    return {
+      success: true,
+      message: 'Conexão estabelecida com sucesso!',
+      details: {
+        model: gatewayDevice?.model || 'UniFi Controller',
+        version: gatewayDevice?.version || (testResult.details?.version as string),
+        status: gatewayDevice?.state || 'online',
+        siteName: testResult.details?.siteName as string,
+        totalSites: testResult.details?.totalSites as number,
+        aps,
+        switches,
+        gateways,
+        clientsOnline: clients.length,
+        guestsOnline,
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: getSpecificErrorMessage(error, 'UniFi'),
+    }
+  }
+}
+
+/**
+ * Busca os sites disponíveis no controlador UniFi.
+ */
+export async function fetchUnifiSitesV2(
+  url: string,
+  username: string,
+  password: string
+): Promise<FetchSitesResponse> {
+  if (!url || !username || !password) {
+    return {
+      success: false,
+      sites: [],
+      error: 'Preencha URL, usuário e senha primeiro.',
+    }
+  }
+
+  const config = buildUnifiConfig(url, username, password, 'default')
+
+  try {
+    const adapter = ControllerFactory.create('unifi')
+    const sites = await adapter.getSites(config)
+
+    if (sites.length === 0) {
+      return {
+        success: false,
+        sites: [],
+        error: 'Nenhum site encontrado. Verifique se o usuário tem acesso a pelo menos um site.',
+      }
+    }
+
+    return {
+      success: true,
+      sites: sites.map(s => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+      })),
+    }
+  } catch (error) {
+    return {
+      success: false,
+      sites: [],
+      error: getSpecificErrorMessage(error, 'UniFi'),
+    }
+  }
+}
+
+/**
+ * Busca informações detalhadas de um site (gateway, devices, clients).
+ */
+export async function fetchUnifiDetailsV2(
+  url: string,
+  username: string,
+  password: string,
+  site: string
+): Promise<FetchDetailsResponse> {
+  if (!url || !username || !password || !site) {
+    return {
+      success: false,
+      error: 'Preencha todos os campos e selecione um site.',
+    }
+  }
+
+  const config = buildUnifiConfig(url, username, password, site)
+
+  try {
+    const adapter = ControllerFactory.create('unifi')
+
+    const [devices, clients, sites] = await Promise.all([
+      adapter.getDevices(config),
+      adapter.getConnectedClients(config),
+      adapter.getSites(config),
+    ])
+
+    const currentSite = sites.find(s => s.id === site)
+    const gatewayDevice = devices.find(d => d.type === 'gateway')
+    const guestsOnline = clients.filter(c => c.isGuest).length
+
+    return {
+      success: true,
+      info: {
+        siteName: currentSite?.name || site,
+        clientCount: clients.length,
+        guestCount: guestsOnline,
+        gateway: gatewayDevice ? {
+          name: gatewayDevice.name,
+          model: gatewayDevice.model,
+          ip: gatewayDevice.ip,
+          version: gatewayDevice.version || '',
+          uptime: 0, // TODO: add uptime to NetworkDevice type
+          state: gatewayDevice.state,
+          mac: gatewayDevice.mac,
+        } : null,
+        devices: devices.map(d => ({
+          name: d.name,
+          model: d.model,
+          type: d.type,
+          ip: d.ip,
+          mac: d.mac,
+          version: d.version,
+          state: d.state,
+          clients: d.clientCount || 0,
+          guests: d.guestCount || 0,
+        })),
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: getSpecificErrorMessage(error, 'UniFi'),
+    }
+  }
+}
+
+/**
+ * Retorna os tipos de controller suportados pelo sistema.
+ */
+export async function getSupportedControllerTypes(): Promise<ControllerType[]> {
+  return ControllerFactory.getSupportedTypes()
+}
