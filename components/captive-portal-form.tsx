@@ -51,7 +51,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
   const [voucherCode, setVoucherCode] = useState('')
 
   // LGPD consent
-  const [lgpdAccepted, setLgpdAccepted] = useState(false)
+  const [lgpdAccepted, setLgpdAccepted] = useState(true)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
