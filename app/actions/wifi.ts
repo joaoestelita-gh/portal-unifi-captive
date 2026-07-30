@@ -746,7 +746,7 @@ export async function checkActiveSession(macAddress: string, detectedController?
 }
 
 // WiFi User Login
-export async function loginWifiUser(email: string, password: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
+export async function loginWifiUser(email: string, password: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams, sessionMeta?: { apName?: string; ssid?: string; site?: string; lgpdAccepted?: boolean }) {
   const parsed = loginWifiUserSchema.safeParse({ email, password, macAddress })
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0]?.message || 'Dados inválidos' }
@@ -855,6 +855,10 @@ export async function loginWifiUser(email: string, password: string, macAddress:
     id: sessionId,
     wifiUserId: user.id,
     macAddress,
+    apName: sessionMeta?.apName || null,
+    ssid: sessionMeta?.ssid || null,
+    site: sessionMeta?.site || null,
+    lgpdAcceptedAt: sessionMeta?.lgpdAccepted ? new Date() : null,
     status: 'active',
     startTime: new Date(),
     expectedEndTime: sessionEndTime,
@@ -871,7 +875,7 @@ export async function loginWifiUser(email: string, password: string, macAddress:
 }
 
 // Voucher Login
-export async function loginWithVoucher(code: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams) {
+export async function loginWithVoucher(code: string, macAddress: string, detectedController?: string | null, arubaParams?: ArubaRedirectParams, sessionMeta?: { apName?: string; ssid?: string; site?: string; lgpdAccepted?: boolean }) {
   const parsed = loginVoucherSchema.safeParse({ code, macAddress })
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0]?.message || 'Dados inválidos' }
@@ -931,6 +935,10 @@ export async function loginWithVoucher(code: string, macAddress: string, detecte
     id: sessionId,
     wifiUserId: null,
     macAddress,
+    apName: sessionMeta?.apName || null,
+    ssid: sessionMeta?.ssid || null,
+    site: sessionMeta?.site || null,
+    lgpdAcceptedAt: sessionMeta?.lgpdAccepted ? new Date() : null,
     status: 'active',
     startTime: new Date(),
     expectedEndTime: sessionEndTime,

@@ -70,6 +70,7 @@ import {
 import { ControllerSetup } from './controller-setup'
 import { ImageUpload } from './image-upload'
 import { VoucherPrintButtons } from './voucher-print'
+import { AnalyticsTab } from './analytics-tab'
 
 interface DashboardStats {
   totalUsers: number
@@ -616,6 +617,17 @@ const result = await updateWifiUser(editingUser.id, {
           >
             <Ticket className="w-5 h-5" />
             Vouchers
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'analytics' 
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`}
+          >
+            <TrendingUp className="w-5 h-5" />
+            Analytics
           </button>
           <button
             onClick={() => { setActiveTab('admins'); loadAdmins(); }}
@@ -1685,6 +1697,11 @@ const result = await updateWifiUser(editingUser.id, {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics">
+            <AnalyticsTab />
           </TabsContent>
 
           {/* Admins Tab */}
