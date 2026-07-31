@@ -49,7 +49,8 @@ import {
   EyeOff,
   Pencil,
   BookOpen,
-  Smartphone
+  Smartphone,
+  Check
 } from 'lucide-react'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -92,6 +93,18 @@ import { ControllerSetup } from './controller-setup'
 import { ImageUpload } from './image-upload'
 import { VoucherPrintButtons } from './voucher-print'
 import { AnalyticsTab } from './analytics-tab'
+
+// Paleta de cores pré-definidas para o fundo da tela de login.
+// `dark: true` indica fundo escuro (o ícone de seleção fica branco).
+const BACKGROUND_SWATCHES: { label: string; value: string; dark: boolean }[] = [
+  { label: 'Preto', value: '#0a0a0a', dark: true },
+  { label: 'Cinza escuro', value: '#1e293b', dark: true },
+  { label: 'Azul escuro', value: '#0f172a', dark: true },
+  { label: 'Verde escuro', value: '#0f2e1d', dark: true },
+  { label: 'Branco', value: '#ffffff', dark: false },
+  { label: 'Cinza claro', value: '#f1f5f9', dark: false },
+  { label: 'Azul claro', value: '#dbeafe', dark: false },
+]
 
 interface DashboardStats {
   totalUsers: number
