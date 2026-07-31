@@ -1984,35 +1984,47 @@ const result = await updateWifiUser(editingUser.id, {
                     hint="Fundo da tela de login do portal. Deixe vazio para usar o padrao"
                   />
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground">Cor de Fundo</Label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        aria-label="Selecionar cor de fundo"
-                        value={backgroundColor || '#0f172a'}
-                        onChange={(e) => setBackgroundColor(e.target.value)}
-                        className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-border/50 bg-transparent p-1"
-                      />
-                      <Input
-                        value={backgroundColor}
-                        onChange={(e) => setBackgroundColor(e.target.value)}
-                        placeholder="#0f172a"
-                        className="bg-secondary/50 border-border/50 focus:border-primary font-mono"
-                      />
+                    <div className="flex items-center justify-between">
+                      <Label className="text-muted-foreground">Cor de Fundo</Label>
                       {backgroundColor && (
-                        <Button
+                        <button
                           type="button"
-                          variant="outline"
-                          size="sm"
                           onClick={() => setBackgroundColor('')}
-                          className="shrink-0 bg-transparent"
+                          className="text-xs text-muted-foreground underline hover:text-foreground"
                         >
-                          Limpar
-                        </Button>
+                          Usar padrão
+                        </button>
                       )}
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                      {BACKGROUND_SWATCHES.map((swatch) => {
+                        const isSelected = backgroundColor === swatch.value
+                        return (
+                          <button
+                            key={swatch.value}
+                            type="button"
+                            title={swatch.label}
+                            aria-label={swatch.label}
+                            aria-pressed={isSelected}
+                            onClick={() => setBackgroundColor(swatch.value)}
+                            className={`relative h-10 w-10 rounded-lg border transition-all hover:scale-105 ${
+                              isSelected
+                                ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                : 'border-border/50'
+                            }`}
+                            style={{ backgroundColor: swatch.value }}
+                          >
+                            {isSelected && (
+                              <Check
+                                className={`absolute inset-0 m-auto h-4 w-4 ${swatch.dark ? 'text-white' : 'text-slate-900'}`}
+                              />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Cor sólida da tela de login. Usada quando não há imagem de fundo. Deixe vazio para usar o gradiente padrão.
+                      Cor sólida da tela de login. Usada quando não há imagem de fundo. Sem seleção, usa o gradiente padrão.
                     </p>
                   </div>
                   <div className="space-y-2">
