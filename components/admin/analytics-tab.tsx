@@ -7,6 +7,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
+import { Bar, BarChart, Area, AreaChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts'
 import { Activity, Wifi, Users, Clock, Router, TrendingUp, RefreshCw, Loader2, Filter } from 'lucide-react'
 import {
   getAnalyticsSummary,
@@ -73,6 +80,42 @@ export function AnalyticsTab() {
   }, [loadData])
 
   const peakHour = byHour.reduce((max, h) => h.connections > max.connections ? h : max, { hour: 0, connections: 0 })
+
+  // Visão do gráfico de conexões: por hora do dia ou por dia
+  const [connectionsView, setConnectionsView] = useState<'hour' | 'day'>('hour')
+
+  const hourChartData = byHour.map(h => ({
+    label: `${String(h.hour).padStart(2, '0')}h`,
+    hour: h.hour,
+    connections: h.connections,
+    isPeak: h.hour === peakHour.hour && h.connections > 0,
+  }))
+
+  const dayChartData = byDay.map(d => {
+    const [, m, day] = d.date.split('-')
+    return {
+      label: `${day}/${m}`,
+      date: d.date,
+      connections: d.connections,
+    }
+  })
+
+  const totalHourConnections = byHour.reduce((sum, h) => sum + h.connections, 0)
+  const totalDayConnections = byDay.reduce((sum, d) => sum + d.connections, 0)
+  const busiestDay = byDay.reduce(
+    (max, d) => (d.connections > max.connections ? d : max),
+    { date: '', connections: 0 },
+  )
+
+  const connectionsChartConfig = {
+    connections: {
+      label: 'Conexões',
+      color: 'var(--chart-1)',
+    },
+  } satisfies ChartConfig
+
+  const hasHourData = !byHour.every(h => h.connections === 0)
+  const hasDayData = byDay.length > 0
 
   return (
     <div className="space-y-6">
@@ -291,39 +334,160 @@ export function AnalyticsTab() {
           </CardContent>
         </Card>
 
-        {/* Horários de pico */}
+        {/* Conexões por Hora / Dia */}
         <Card className="bg-card/50 border-border/50 lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="w-4 h-4 text-amber-400" />
-              Conexões por Hora do Dia
-            </CardTitle>
-            <CardDescription>Distribuição ao longo do dia (últimos 30 dias)</CardDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  {connectionsView === 'hour' ? 'Conexões por Hora do Dia' : 'Conexões por Dia'}
+                </CardTitle>
+                <CardDescription>
+                  {connectionsView === 'hour'
+                    ? 'Distribuição ao longo das 24 horas (período filtrado)'
+                    : 'Evolução diária de conexões (últimos 30 dias)'}
+                </CardDescription>
+              </div>
+              <div className="inline-flex shrink-0 rounded-lg border border-border/50 bg-secondary/30 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setConnectionsView('hour')}
+                  className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                    connectionsView === 'hour'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Por Hora
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConnectionsView('day')}
+                  className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                    connectionsView === 'day'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Por Dia
+                </button>
+              </div>
+            </div>
+
+            {/* Mini-estatísticas do período */}
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1">
+              {connectionsView === 'hour' ? (
+                <>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-bold text-foreground">{totalHourConnections}</span>
+                    <span className="text-xs text-muted-foreground">conexões</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-bold text-amber-400">{peakHour.hour}h</span>
+                    <span className="text-xs text-muted-foreground">horário de pico ({peakHour.connections})</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-bold text-foreground">{totalDayConnections}</span>
+                    <span className="text-xs text-muted-foreground">conexões no período</span>
+                  </div>
+                  {busiestDay.connections > 0 && (
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-lg font-bold text-amber-400">
+                        {busiestDay.date.split('-').reverse().slice(0, 2).join('/')}
+                      </span>
+                      <span className="text-xs text-muted-foreground">dia mais movimentado ({busiestDay.connections})</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {byHour.every(h => h.connections === 0) ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
+            {connectionsView === 'hour' ? (
+              hasHourData ? (
+                <ChartContainer config={connectionsChartConfig} className="h-[260px] w-full">
+                  <BarChart data={hourChartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      interval={1}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      width={36}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <ChartTooltip
+                      cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                      content={<ChartTooltipContent labelKey="label" />}
+                    />
+                    <Bar dataKey="connections" radius={[4, 4, 0, 0]}>
+                      {hourChartData.map((entry) => (
+                        <Cell
+                          key={entry.hour}
+                          fill={entry.isPeak ? 'var(--chart-4)' : 'var(--chart-1)'}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-16">
+                  Nenhuma conexão registrada ainda.
+                </p>
+              )
+            ) : hasDayData ? (
+              <ChartContainer config={connectionsChartConfig} className="h-[260px] w-full">
+                <AreaChart data={dayChartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="fillConnections" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={24}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    width={36}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <ChartTooltip
+                    cursor={{ stroke: 'var(--border)' }}
+                    content={<ChartTooltipContent labelKey="label" />}
+                  />
+                  <Area
+                    dataKey="connections"
+                    type="monotone"
+                    fill="url(#fillConnections)"
+                    stroke="var(--chart-1)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-16">
                 Nenhuma conexão registrada ainda.
               </p>
-            ) : (
-              <div className="flex items-end gap-1 h-32">
-                {byHour.map(h => {
-                  const maxConn = Math.max(...byHour.map(x => x.connections), 1)
-                  const height = Math.max((h.connections / maxConn) * 100, 2)
-                  const isPeak = h.hour === peakHour.hour && h.connections > 0
-                  return (
-                    <div key={h.hour} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[9px] text-muted-foreground">{h.connections || ''}</span>
-                      <div
-                        className={`w-full rounded-t transition-all ${isPeak ? 'bg-amber-400' : 'bg-primary/60'}`}
-                        style={{ height: `${height}%` }}
-                        title={`${h.hour}h: ${h.connections} conexões`}
-                      />
-                      <span className="text-[9px] text-muted-foreground">{h.hour}</span>
-                    </div>
-                  )
-                })}
-              </div>
             )}
           </CardContent>
         </Card>
