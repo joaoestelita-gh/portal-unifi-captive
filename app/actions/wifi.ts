@@ -1,5 +1,3 @@
-'use server'
-
 /**
  * WiFi Actions — Barrel re-export for backwards compatibility.
  *
