@@ -60,7 +60,6 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   // Resultado detalhado do teste de conexão UniFi (mantido até o próximo teste)
   const [connectionInfo, setConnectionInfo] = useState<{
     model?: string
@@ -124,26 +123,36 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   // Debug logs state
   const [portalLogs, setPortalLogs] = useState<PortalLog[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [clearingLogs, setClearingLogs] = useState(false)
 
-  const fetchPortalLogs = useCallback(async () => {
+  // manual = disparado pelo usuário (mostra toast); silencioso = auto-refresh
+  const fetchPortalLogs = useCallback(async (manual = false) => {
     setLoadingLogs(true)
     try {
       const res = await fetch('/api/debug/portal-logs')
+      if (!res.ok) throw new Error('Falha ao carregar logs')
       const data = await res.json()
       setPortalLogs(data.logs || [])
+      if (manual) toast.success('Logs atualizados')
     } catch (error) {
       console.error('Error fetching portal logs:', error)
+      if (manual) showError('Não foi possível atualizar os logs de acesso.')
     }
     setLoadingLogs(false)
   }, [])
 
   const clearPortalLogs = async () => {
+    setClearingLogs(true)
     try {
-      await fetch('/api/debug/portal-logs', { method: 'DELETE' })
+      const res = await fetch('/api/debug/portal-logs', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Falha ao limpar logs')
       setPortalLogs([])
+      toast.success('Logs limpos com sucesso')
     } catch (error) {
       console.error('Error clearing logs:', error)
+      showError('Não foi possível limpar os logs de acesso.')
     }
+    setClearingLogs(false)
   }
 
   // Auto-refresh logs every 5 seconds when on UniFi or Aruba
@@ -158,12 +167,14 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
     setCopied(id)
+    toast.success('Copiado!', { description: text })
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const handleSave = async () => {
+  // Retorna true/false para que o handleTest saiba se o salvamento foi bem-sucedido.
+  // silent evita toast duplicado quando chamado por dentro do "Testar Conexão".
+  const handleSave = async (silent = false) => {
     setSaving(true)
-    setTestResult(null)
     try {
       await updateControllerSettings({
         controllerType,
@@ -177,24 +188,26 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
         arubaClientId,
         arubaClientSecret,
       })
-      setTestResult({ success: true, message: 'Configurações salvas com sucesso!' })
+      if (!silent) toast.success('Configurações salvas', { description: 'As configurações da controladora foram salvas com sucesso.' })
+      return true
     } catch {
       showError('Erro ao salvar configurações')
+      return false
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
 const handleTest = async () => {
     setTesting(true)
-    setTestResult(null)
     setConnectionInfo(null)
     try {
-      await handleSave()
+      await handleSave(true)
       const result = await testUnifiConnectionV2(unifiUrl, unifiUsername, unifiPassword, unifiSite)
       if (result.success) {
-        // Exibe o card visual com os detalhes; limpa a linha de texto do "Salvar"
-        setTestResult(null)
+        // Exibe o card visual com os detalhes da controladora
         setConnectionInfo(result.details ?? {})
+        toast.success('Conexão estabelecida', { description: 'A controladora UniFi respondeu com sucesso.' })
       } else {
         showError(result.message)
       }
@@ -211,13 +224,12 @@ const handleTest = async () => {
     }
     
     setLoadingSites(true)
-    setTestResult(null)
     
     try {
       const result = await fetchUnifiSitesV2(unifiUrl, unifiUsername, unifiPassword)
       if (result.success && result.sites.length > 0) {
         setUnifiSites(result.sites.map(s => ({ id: s.id, name: s.name, role: 'admin' })))
-        setTestResult({ success: true, message: `${result.sites.length} site(s) encontrado(s)!` })
+        toast.success('Sites sincronizados', { description: `${result.sites.length} site(s) encontrado(s).` })
         // Auto-select first site if none selected
         if (!unifiSite || unifiSite === 'default') {
           setUnifiSite(result.sites[0].id)
@@ -239,13 +251,12 @@ const handleTest = async () => {
     }
     
     setLoadingInfo(true)
-    setTestResult(null)
     
     try {
       const result = await fetchUnifiDetailsV2(unifiUrl, unifiUsername, unifiPassword, unifiSite)
       if (result.success && result.info) {
         setSiteInfo(result.info)
-        setTestResult({ success: true, message: 'Informações carregadas!' })
+        toast.success('Informações carregadas', { description: 'Os detalhes do site foram atualizados.' })
       } else {
         showError(result.error || 'Falha ao buscar informações do site')
       }
@@ -291,7 +302,7 @@ const handleTest = async () => {
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
-              className="flex-1 border-border/50 hover:border-cyan-500/50 hover:text-cyan-400 hover:bg-cyan-500/10"
+              className="flex-1 border-border/50 hover:border-cyan-500/50 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all duration-200"
               onClick={() => {
                 navigator.clipboard.writeText(fullPortalUrl)
                 toast.success('URL copiada com sucesso!', {
@@ -311,7 +322,7 @@ const handleTest = async () => {
             </Button>
             <Button
               variant="outline"
-              className="flex-1 border-border/50 hover:border-primary/50 hover:text-primary hover:bg-primary/10"
+              className="flex-1 border-border/50 hover:border-primary/50 hover:text-primary hover:bg-primary/10 transition-all duration-200"
               onClick={() => window.open(fullPortalUrl, '_blank')}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
@@ -377,14 +388,6 @@ const handleTest = async () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Mensagem de sucesso (erros são exibidos via toast) */}
-      {testResult?.success && (
-        <div className="p-3 rounded-xl text-sm flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-          <CheckCircle className="w-4 h-4" />
-          {testResult.message}
-        </div>
-      )}
 
       {/* Resultado detalhado do teste de conexão UniFi (visível até o próximo teste) */}
       {connectionInfo && (() => {
@@ -526,14 +529,14 @@ const handleTest = async () => {
                       variant="outline"
                       onClick={handleFetchSites}
                       disabled={loadingSites || !unifiUrl || !unifiUsername || !unifiPassword}
-                      className="shrink-0"
+                      className="shrink-0 transition-all duration-200"
                     >
                       {loadingSites ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <RefreshCw className="w-4 h-4" />
                       )}
-                      <span className="ml-2 hidden sm:inline">Sincronizar Sites</span>
+                      <span className="ml-2 hidden sm:inline">{loadingSites ? 'Sincronizando...' : 'Sincronizar Sites'}</span>
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -542,30 +545,32 @@ const handleTest = async () => {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 <Button 
-                  onClick={handleSave} 
-                  disabled={saving || testing}
-                  className="bg-primary hover:bg-primary/90"
+                  onClick={() => handleSave()} 
+                  disabled={saving || testing || loadingInfo}
+                  className="bg-primary hover:bg-primary/90 transition-all duration-200"
                 >
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                  Salvar
+                  {saving ? 'Salvando...' : 'Salvar'}
                 </Button>
                 <Button 
                   onClick={handleTest} 
-                  disabled={saving || testing || !unifiUrl || !unifiUsername || !unifiPassword}
+                  disabled={saving || testing || loadingInfo || !unifiUrl || !unifiUsername || !unifiPassword}
                   variant="outline"
+                  className="transition-all duration-200"
                 >
                   {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wifi className="w-4 h-4 mr-2" />}
-                  Testar Conexão
+                  {testing ? 'Testando...' : 'Testar Conexão'}
                 </Button>
                 <Button 
                   onClick={handleFetchSiteInfo} 
-                  disabled={loadingInfo || !unifiUrl || !unifiUsername || !unifiPassword || !unifiSite}
+                  disabled={saving || testing || loadingInfo || !unifiUrl || !unifiUsername || !unifiPassword || !unifiSite}
                   variant="outline"
+                  className="transition-all duration-200"
                 >
                   {loadingInfo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Info className="w-4 h-4 mr-2" />}
-                  Ver Detalhes
+                  {loadingInfo ? 'Carregando...' : 'Ver Detalhes'}
                 </Button>
               </div>
             </CardContent>
@@ -573,7 +578,7 @@ const handleTest = async () => {
 
           {/* Informações do Cloud Gateway */}
           {siteInfo && (
-            <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
+            <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   <Router className="w-5 h-5 text-green-400" />
@@ -722,11 +727,25 @@ const handleTest = async () => {
                   Logs de Acesso ao Portal
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={fetchPortalLogs} disabled={loadingLogs}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fetchPortalLogs(true)}
+                    disabled={loadingLogs || clearingLogs}
+                    className="transition-all duration-200"
+                    aria-label="Atualizar logs"
+                  >
                     {loadingLogs ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={clearPortalLogs}>
-                    <Trash2 className="w-4 h-4" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearPortalLogs}
+                    disabled={clearingLogs || portalLogs.length === 0}
+                    className="transition-all duration-200"
+                    aria-label="Limpar logs"
+                  >
+                    {clearingLogs ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                   </Button>
                 </div>
               </div>
@@ -953,12 +972,12 @@ const handleTest = async () => {
 
               <div className="flex gap-2 pt-2">
                 <Button 
-                  onClick={handleSave} 
+                  onClick={() => handleSave()} 
                   disabled={saving}
-                  className="bg-primary hover:bg-primary/90"
+                  className="bg-primary hover:bg-primary/90 transition-all duration-200"
                 >
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-                  Salvar Configuração
+                  {saving ? 'Salvando...' : 'Salvar Configuração'}
                 </Button>
               </div>
             </CardContent>
@@ -1022,11 +1041,25 @@ const handleTest = async () => {
                   Logs de Acesso ao Portal
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={fetchPortalLogs} disabled={loadingLogs}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fetchPortalLogs(true)}
+                    disabled={loadingLogs || clearingLogs}
+                    className="transition-all duration-200"
+                    aria-label="Atualizar logs"
+                  >
                     {loadingLogs ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={clearPortalLogs}>
-                    <Trash2 className="w-4 h-4" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearPortalLogs}
+                    disabled={clearingLogs || portalLogs.length === 0}
+                    className="transition-all duration-200"
+                    aria-label="Limpar logs"
+                  >
+                    {clearingLogs ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                   </Button>
                 </div>
               </div>
