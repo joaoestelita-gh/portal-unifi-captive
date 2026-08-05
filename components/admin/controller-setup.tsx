@@ -35,6 +35,20 @@ interface ControllerSetupProps {
   settings: ControllerSettings
 }
 
+type ControllerTypeValue = 'none' | 'unifi' | 'aruba' | 'both'
+
+const CONTROLLER_OPTIONS: {
+  value: ControllerTypeValue
+  title: string
+  description: string
+  icon: typeof Server
+}[] = [
+  { value: 'none', title: 'Portal Independente', description: 'Sem integração com controladora', icon: Globe },
+  { value: 'unifi', title: 'UniFi', description: 'Cloud Gateway / Dream Machine', icon: Router },
+  { value: 'aruba', title: 'Aruba Instant On', description: 'HP Networking', icon: Wifi },
+  { value: 'both', title: 'UniFi + Aruba', description: 'Ambas as controladoras', icon: Server },
+]
+
 export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [copied, setCopied] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -43,8 +57,8 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   
   // Controller type
-  const [controllerType, setControllerType] = useState<'none' | 'unifi' | 'aruba' | 'both'>(
-    (settings.controllerType as 'none' | 'unifi' | 'aruba' | 'both') || 'none'
+  const [controllerType, setControllerType] = useState<ControllerTypeValue>(
+    (settings.controllerType as ControllerTypeValue) || 'none'
   )
   
   // UniFi states
@@ -289,50 +303,46 @@ const handleTest = async () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <button
-              onClick={() => setControllerType('none')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'none'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">Nenhuma</div>
-              <div className="text-xs text-muted-foreground mt-1">Autorização manual</div>
-            </button>
-            <button
-              onClick={() => setControllerType('unifi')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'unifi'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">UniFi</div>
-              <div className="text-xs text-muted-foreground mt-1">Cloud Key, UDM</div>
-            </button>
-            <button
-              onClick={() => setControllerType('aruba')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'aruba'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">HP Aruba</div>
-              <div className="text-xs text-muted-foreground mt-1">Instant On</div>
-            </button>
-            <button
-              onClick={() => setControllerType('both')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'both'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">Ambas</div>
-              <div className="text-xs text-muted-foreground mt-1">UniFi + Aruba</div>
-            </button>
+            {CONTROLLER_OPTIONS.map((option) => {
+              const isSelected = controllerType === option.value
+              const Icon = option.icon
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setControllerType(option.value)}
+                  className={`group relative overflow-hidden p-4 rounded-xl border-2 text-left transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                    isSelected
+                      ? 'border-primary bg-primary/10 -translate-y-0.5 shadow-md shadow-primary/10 ring-2 ring-primary/30'
+                      : 'border-border/50 bg-secondary/30 hover:border-primary/50 hover:bg-secondary/60 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5'
+                  }`}
+                >
+                  {/* Indicador de seleção animado */}
+                  <div
+                    className={`absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all duration-200 ease-out ${
+                      isSelected ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+                    }`}
+                  >
+                    <Check className="h-3 w-3" />
+                  </div>
+
+                  <Icon
+                    className={`mb-2 h-5 w-5 transition-colors duration-200 ${
+                      isSelected ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                    }`}
+                  />
+                  <div
+                    className={`font-medium transition-colors duration-200 ${
+                      isSelected ? 'text-primary' : 'text-foreground'
+                    }`}
+                  >
+                    {option.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 text-pretty">{option.description}</div>
+                </button>
+              )
+            })}
           </div>
         </CardContent>
       </Card>
