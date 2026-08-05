@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, XCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus, ExternalLink } from 'lucide-react'
+import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus, ExternalLink } from 'lucide-react'
 import { updateControllerSettings } from '@/app/actions/wifi'
 import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2 } from '@/app/actions/controller'
 import { toast } from 'sonner'
@@ -36,16 +36,48 @@ interface ControllerSetupProps {
   settings: ControllerSettings
 }
 
+type ControllerTypeValue = 'none' | 'unifi' | 'aruba' | 'both'
+
+const CONTROLLER_OPTIONS: {
+  value: ControllerTypeValue
+  title: string
+  description: string
+  icon: typeof Server
+}[] = [
+  { value: 'none', title: 'Portal Independente', description: 'Sem integração com controladora', icon: Globe },
+  { value: 'unifi', title: 'UniFi', description: 'Cloud Gateway / Dream Machine', icon: Router },
+  { value: 'aruba', title: 'Aruba Instant On', description: 'HP Networking', icon: Wifi },
+  { value: 'both', title: 'UniFi + Aruba', description: 'Ambas as controladoras', icon: Server },
+]
+
 export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
+  // Exibe erros via toast (substitui o antigo card de mensagem para falhas)
+  const showError = (message: string) => {
+    toast.error('Erro', { description: message })
+  }
+
   const [copied, setCopied] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  // Resultado detalhado do teste de conexão UniFi (mantido até o próximo teste)
+  const [connectionInfo, setConnectionInfo] = useState<{
+    model?: string
+    version?: string
+    status?: string
+    siteName?: string
+    totalSites?: number
+    aps?: number
+    switches?: number
+    gateways?: number
+    clientsOnline?: number
+    guestsOnline?: number
+  } | null>(null)
   
   // Controller type
-  const [controllerType, setControllerType] = useState<'none' | 'unifi' | 'aruba' | 'both'>(
-    (settings.controllerType as 'none' | 'unifi' | 'aruba' | 'both') || 'none'
+  const [controllerType, setControllerType] = useState<ControllerTypeValue>(
+    (settings.controllerType as ControllerTypeValue) || 'none'
   )
   
   // UniFi states
@@ -147,7 +179,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
       })
       setTestResult({ success: true, message: 'Configurações salvas com sucesso!' })
     } catch {
-      setTestResult({ success: false, message: 'Erro ao salvar configurações' })
+      showError('Erro ao salvar configurações')
     }
     setSaving(false)
   }
@@ -155,37 +187,26 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
 const handleTest = async () => {
     setTesting(true)
     setTestResult(null)
+    setConnectionInfo(null)
     try {
       await handleSave()
       const result = await testUnifiConnectionV2(unifiUrl, unifiUsername, unifiPassword, unifiSite)
       if (result.success) {
-        const d = result.details
-        const detailParts = []
-        if (d?.model) detailParts.push(`Modelo: ${d.model}`)
-        if (d?.version) detailParts.push(`v${d.version}`)
-        if (d?.status) detailParts.push(`Status: ${d.status}`)
-        if (d?.aps !== undefined) detailParts.push(`${d.aps} AP(s)`)
-        if (d?.switches !== undefined) detailParts.push(`${d.switches} Switch(es)`)
-        if (d?.clientsOnline !== undefined) detailParts.push(`${d.clientsOnline} clientes online`)
-        if (d?.totalSites !== undefined) detailParts.push(`${d.totalSites} site(s)`)
-        
-        const message = detailParts.length > 0
-          ? `Conexão estabelecida! ${detailParts.join(' · ')}`
-          : result.message
-        
-        setTestResult({ success: true, message })
+        // Exibe o card visual com os detalhes; limpa a linha de texto do "Salvar"
+        setTestResult(null)
+        setConnectionInfo(result.details ?? {})
       } else {
-        setTestResult({ success: false, message: result.message })
+        showError(result.message)
       }
     } catch (error) {
-      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha inesperada ao testar conexão. Verifique os dados e tente novamente.' })
+      showError(error instanceof Error ? error.message : 'Falha inesperada ao testar conexão. Verifique os dados e tente novamente.')
     }
     setTesting(false)
   }
 
   const handleFetchSites = async () => {
     if (!unifiUrl || !unifiUsername || !unifiPassword) {
-      setTestResult({ success: false, message: 'Preencha URL, usuário e senha primeiro' })
+      showError('Preencha URL, usuário e senha primeiro')
       return
     }
     
@@ -202,10 +223,10 @@ const handleTest = async () => {
           setUnifiSite(result.sites[0].id)
         }
       } else {
-        setTestResult({ success: false, message: result.error || 'Nenhum site encontrado' })
+        showError(result.error || 'Nenhum site encontrado')
       }
     } catch (error) {
-      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha ao buscar sites. Verifique as credenciais.' })
+      showError(error instanceof Error ? error.message : 'Falha ao buscar sites. Verifique as credenciais.')
     }
     
     setLoadingSites(false)
@@ -213,7 +234,7 @@ const handleTest = async () => {
 
   const handleFetchSiteInfo = async () => {
     if (!unifiUrl || !unifiUsername || !unifiPassword || !unifiSite) {
-      setTestResult({ success: false, message: 'Preencha todos os campos e selecione um site' })
+      showError('Preencha todos os campos e selecione um site')
       return
     }
     
@@ -226,10 +247,10 @@ const handleTest = async () => {
         setSiteInfo(result.info)
         setTestResult({ success: true, message: 'Informações carregadas!' })
       } else {
-        setTestResult({ success: false, message: result.error || 'Falha ao buscar informações do site' })
+        showError(result.error || 'Falha ao buscar informações do site')
       }
     } catch (error) {
-      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha ao buscar informações. Verifique a conexão com o controller.' })
+      showError(error instanceof Error ? error.message : 'Falha ao buscar informações. Verifique a conexão com o controller.')
     }
     
     setLoadingInfo(false)
@@ -313,65 +334,114 @@ const handleTest = async () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <button
-              onClick={() => setControllerType('none')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'none'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">Nenhuma</div>
-              <div className="text-xs text-muted-foreground mt-1">Autorização manual</div>
-            </button>
-            <button
-              onClick={() => setControllerType('unifi')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'unifi'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">UniFi</div>
-              <div className="text-xs text-muted-foreground mt-1">Cloud Key, UDM</div>
-            </button>
-            <button
-              onClick={() => setControllerType('aruba')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'aruba'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">HP Aruba</div>
-              <div className="text-xs text-muted-foreground mt-1">Instant On</div>
-            </button>
-            <button
-              onClick={() => setControllerType('both')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
-                controllerType === 'both'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border/50 hover:border-border bg-secondary/30'
-              }`}
-            >
-              <div className="font-medium text-foreground">Ambas</div>
-              <div className="text-xs text-muted-foreground mt-1">UniFi + Aruba</div>
-            </button>
+            {CONTROLLER_OPTIONS.map((option) => {
+              const isSelected = controllerType === option.value
+              const Icon = option.icon
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setControllerType(option.value)}
+                  className={`group relative overflow-hidden p-4 rounded-xl border-2 text-left transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                    isSelected
+                      ? 'border-primary bg-primary/10 -translate-y-0.5 shadow-md shadow-primary/10 ring-2 ring-primary/30'
+                      : 'border-border/50 bg-secondary/30 hover:border-primary/50 hover:bg-secondary/60 hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5'
+                  }`}
+                >
+                  {/* Indicador de seleção animado */}
+                  <div
+                    className={`absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all duration-200 ease-out ${
+                      isSelected ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
+                    }`}
+                  >
+                    <Check className="h-3 w-3" />
+                  </div>
+
+                  <Icon
+                    className={`mb-2 h-5 w-5 transition-colors duration-200 ${
+                      isSelected ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                    }`}
+                  />
+                  <div
+                    className={`font-medium transition-colors duration-200 ${
+                      isSelected ? 'text-primary' : 'text-foreground'
+                    }`}
+                  >
+                    {option.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 text-pretty">{option.description}</div>
+                </button>
+              )
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Mensagem de resultado */}
-      {testResult && (
-        <div className={`p-3 rounded-xl text-sm flex items-center gap-2 ${
-          testResult.success 
-            ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
-            : 'bg-red-500/10 border border-red-500/30 text-red-400'
-        }`}>
-          {testResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+      {/* Mensagem de sucesso (erros são exibidos via toast) */}
+      {testResult?.success && (
+        <div className="p-3 rounded-xl text-sm flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <CheckCircle className="w-4 h-4" />
           {testResult.message}
         </div>
       )}
+
+      {/* Resultado detalhado do teste de conexão UniFi (visível até o próximo teste) */}
+      {connectionInfo && (() => {
+        const statusRaw = (connectionInfo.status || 'online').toLowerCase()
+        const isOnline = !['offline', 'down', 'disconnected', 'error'].some(s => statusRaw.includes(s))
+        const fmt = (v?: number) => (v === undefined || v === null ? '—' : String(v))
+        const statTiles = [
+          { label: 'Versão UniFi', value: connectionInfo.version ? `v${connectionInfo.version}` : '—' },
+          { label: 'Modelo da Controladora', value: connectionInfo.model || '—' },
+          { label: 'APs Conectados', value: fmt(connectionInfo.aps) },
+          { label: 'Switches', value: fmt(connectionInfo.switches) },
+          { label: 'Clientes Online', value: fmt(connectionInfo.clientsOnline) },
+          { label: 'Total de Sites', value: fmt(connectionInfo.totalSites) },
+          { label: 'Convidados Online', value: fmt(connectionInfo.guestsOnline) },
+        ]
+        return (
+          <Card className="bg-card/50 border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Wifi className="w-4 h-4 text-primary" />
+                  Resultado do Teste de Conexão
+                </CardTitle>
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+              </div>
+              {connectionInfo.siteName && (
+                <CardDescription>Site: {connectionInfo.siteName}</CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Status como badge verde/vermelho */}
+                <div className="rounded-xl border border-border/50 bg-secondary/30 p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <span
+                    className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      isOnline
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/30'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                    {isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+
+                {statTiles.map((tile) => (
+                  <div key={tile.label} className="rounded-xl border border-border/50 bg-secondary/30 p-3">
+                    <p className="text-xs text-muted-foreground text-pretty">{tile.label}</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground truncate">{tile.value}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Configurações UniFi */}
       {(controllerType === 'unifi' || controllerType === 'both') && (
@@ -463,11 +533,11 @@ const handleTest = async () => {
                       ) : (
                         <RefreshCw className="w-4 h-4" />
                       )}
-                      <span className="ml-2 hidden sm:inline">Buscar Sites</span>
+                      <span className="ml-2 hidden sm:inline">Sincronizar Sites</span>
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Clique em &quot;Buscar Sites&quot; para listar os dispositivos disponíveis
+                    Clique em &quot;Sincronizar Sites&quot; para listar os dispositivos disponíveis
                   </p>
                 </div>
               </div>
