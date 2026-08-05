@@ -14,7 +14,10 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { Bar, BarChart, Area, AreaChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts'
-import { Activity, Wifi, Users, Clock, Router, TrendingUp, RefreshCw, Loader2, Filter } from 'lucide-react'
+import { Activity, Wifi, Users, Clock, Router, TrendingUp, RefreshCw, Loader2, Filter, AlertCircle, BarChart3, Inbox } from 'lucide-react'
+import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import {
   getAnalyticsSummary,
   getConnectionsByAP,
@@ -35,6 +38,9 @@ import {
 
 export function AnalyticsTab() {
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  // Diferencia a primeira carga (mostra skeletons) de um refresh manual (mostra toast)
+  const [initialLoaded, setInitialLoaded] = useState(false)
   const [filters, setFilters] = useState<AnalyticsFilters>({})
   const [showFilters, setShowFilters] = useState(false)
 
@@ -48,8 +54,9 @@ export function AnalyticsTab() {
   const [uniqueAPs, setUniqueAPs] = useState<string[]>([])
   const [uniqueSSIDs, setUniqueSSIDs] = useState<string[]>([])
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (manual = false) => {
     setLoading(true)
+    setError(false)
     try {
       const [summaryData, apData, ssidData, hourData, dayData, recentData, aps, ssids] = await Promise.all([
         getAnalyticsSummary(filters),
@@ -69,10 +76,15 @@ export function AnalyticsTab() {
       setRecent(recentData)
       setUniqueAPs(aps)
       setUniqueSSIDs(ssids)
-    } catch (error) {
-      console.error('Error loading analytics:', error)
+      if (manual) toast.success('Analytics atualizado', { description: 'Os dados foram recarregados com sucesso.' })
+    } catch (err) {
+      console.error('Error loading analytics:', err)
+      setError(true)
+      toast.error('Erro ao carregar analytics', { description: 'Não foi possível buscar os dados. Tente novamente.' })
+    } finally {
+      setLoading(false)
+      setInitialLoaded(true)
     }
-    setLoading(false)
   }, [filters])
 
   useEffect(() => {
@@ -139,10 +151,12 @@ export function AnalyticsTab() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={loadData}
+                onClick={() => loadData(true)}
                 disabled={loading}
+                className="transition-all duration-200"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span className="ml-2 hidden sm:inline">{loading ? 'Atualizando...' : 'Atualizar'}</span>
               </Button>
             </div>
           </div>
@@ -199,9 +213,45 @@ export function AnalyticsTab() {
         )}
       </Card>
 
+      {/* Estado de carregamento inicial: skeletons */}
+      {loading && !initialLoaded && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="bg-card/50 border-border/50">
+              <CardContent className="pt-4 pb-3 flex flex-col items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded-full" />
+                <Skeleton className="h-7 w-12" />
+                <Skeleton className="h-3 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Estado de erro: placeholder elegante */}
+      {error && !summary && !loading && (
+        <Card className="bg-card/50 border-destructive/30">
+          <CardContent className="p-0">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon" className="bg-destructive/10 text-destructive">
+                  <AlertCircle className="w-6 h-6" />
+                </EmptyMedia>
+                <EmptyTitle>Erro ao carregar analytics</EmptyTitle>
+                <EmptyDescription>Não foi possível buscar os dados. Verifique a conexão e tente novamente.</EmptyDescription>
+              </EmptyHeader>
+              <Button variant="outline" onClick={() => loadData(true)} className="transition-all duration-200">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Tentar novamente
+              </Button>
+            </Empty>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Cards de resumo */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 animate-in fade-in duration-300">
           <Card className="bg-card/50 border-border/50">
             <CardContent className="pt-4 pb-3 text-center">
               <Activity className="w-5 h-5 text-primary mx-auto mb-1" />
@@ -247,7 +297,9 @@ export function AnalyticsTab() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {summary && (
+      <>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-300">
         {/* Conexões por AP */}
         <Card className="bg-card/50 border-border/50">
           <CardHeader>
@@ -259,11 +311,11 @@ export function AnalyticsTab() {
           </CardHeader>
           <CardContent>
             {byAP.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Nenhuma conexão com AP registrado ainda.
-                <br />
+              <div className="flex flex-col items-center gap-2 text-muted-foreground py-8 text-center">
+                <Router className="w-8 h-8 opacity-40" />
+                <p className="text-sm">Nenhuma conexão com AP registrado ainda</p>
                 <span className="text-xs">Os dados aparecem quando o AP redireciona com parâmetros.</span>
-              </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {byAP.map((ap, i) => {
@@ -306,9 +358,10 @@ export function AnalyticsTab() {
           </CardHeader>
           <CardContent>
             {bySSID.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Nenhuma conexão com SSID registrado ainda.
-              </p>
+              <div className="flex flex-col items-center gap-2 text-muted-foreground py-8 text-center">
+                <Wifi className="w-8 h-8 opacity-40" />
+                <p className="text-sm">Nenhuma conexão com SSID registrado ainda</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {bySSID.map(s => {
@@ -442,9 +495,10 @@ export function AnalyticsTab() {
                   </BarChart>
                 </ChartContainer>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-16">
-                  Nenhuma conexão registrada ainda.
-                </p>
+                <div className="flex flex-col items-center gap-2 text-muted-foreground py-16 text-center">
+                  <BarChart3 className="w-8 h-8 opacity-40" />
+                  <p className="text-sm">Nenhuma conexão registrada ainda</p>
+                </div>
               )
             ) : hasDayData ? (
               <ChartContainer config={connectionsChartConfig} className="h-[260px] w-full">
@@ -485,9 +539,10 @@ export function AnalyticsTab() {
                 </AreaChart>
               </ChartContainer>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-16">
-                Nenhuma conexão registrada ainda.
-              </p>
+              <div className="flex flex-col items-center gap-2 text-muted-foreground py-16 text-center">
+                <BarChart3 className="w-8 h-8 opacity-40" />
+                <p className="text-sm">Nenhuma conexão registrada ainda</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -518,8 +573,11 @@ export function AnalyticsTab() {
               <TableBody>
                 {recent.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nenhuma conexão registrada
+                    <TableCell colSpan={6} className="py-10">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Inbox className="w-8 h-8 opacity-40" />
+                        <p className="text-sm">Nenhuma conexão registrada ainda</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -561,6 +619,8 @@ export function AnalyticsTab() {
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   )
 }

@@ -1,10 +1,12 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Upload, Loader2, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Upload, Loader2, X, CheckCircle2, AlertCircle } from 'lucide-react'
 
 interface ImageUploadProps {
   label: string
@@ -26,9 +28,11 @@ export function ImageUpload({
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [justUploaded, setJustUploaded] = useState(false)
 
   async function handleFile(file: File) {
     setError('')
+    setJustUploaded(false)
     setUploading(true)
     try {
       const formData = new FormData()
@@ -36,12 +40,19 @@ export function ImageUpload({
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Falha no upload')
+        const message = data.error || 'Falha no upload'
+        setError(message)
+        toast.error('Falha no upload', { description: message })
         return
       }
       onChange(data.url)
+      setJustUploaded(true)
+      toast.success('Imagem enviada', { description: `${label} atualizada com sucesso.` })
+      // Esconde o badge de sucesso após alguns segundos
+      setTimeout(() => setJustUploaded(false), 3000)
     } catch {
       setError('Falha no upload')
+      toast.error('Falha no upload', { description: 'Não foi possível enviar a imagem. Tente novamente.' })
     } finally {
       setUploading(false)
     }
@@ -49,7 +60,15 @@ export function ImageUpload({
 
   return (
     <div className="space-y-2">
-      <Label className="text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <Label className="text-muted-foreground">{label}</Label>
+        {justUploaded && (
+          <Badge className="gap-1 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 animate-in fade-in duration-200">
+            <CheckCircle2 className="w-3 h-3" />
+            Enviada
+          </Badge>
+        )}
+      </div>
 
       <div className="flex gap-2">
         <Input
@@ -81,7 +100,12 @@ export function ImageUpload({
         </Button>
       </div>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs text-destructive animate-in fade-in duration-200">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
 
       {value && (
         <div className="relative mt-2">
