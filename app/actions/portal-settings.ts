@@ -30,6 +30,7 @@ export async function getPortalSettings() {
       termsText: null,
       primaryColor: DEFAULT_PORTAL_SETTINGS.primaryColor,
       secondaryColor: DEFAULT_PORTAL_SETTINGS.secondaryColor,
+      colorScheme: 'default',
       defaultSessionMinutes: DEFAULT_PORTAL_SETTINGS.defaultSessionMinutes,
       defaultDailyMinutes: DEFAULT_PORTAL_SETTINGS.defaultDailyMinutes,
       defaultSpeedDown: DEFAULT_PORTAL_SETTINGS.defaultSpeedDown,

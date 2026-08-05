@@ -161,6 +161,8 @@ export const portalSettings = pgTable('portal_settings', {
   backgroundColor: text('backgroundColor'),
   primaryColor: text('primaryColor').default('#3b82f6'),
   secondaryColor: text('secondaryColor').default('#1e40af'),
+  // Esquema de cores do painel admin: 'default' | 'grafana' | 'unifi' | 'cloudflare' | 'github' | 'azure'
+  colorScheme: text('colorScheme').default('default'),
   termsText: text('termsText'),
   successRedirectUrl: text('successRedirectUrl').default('https://google.com'),
   defaultSessionMinutes: integer('defaultSessionMinutes').default(120),

@@ -52,7 +52,8 @@ import {
   Smartphone,
   Check,
   Loader2,
-  Save
+  Save,
+  Palette
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -94,6 +95,7 @@ import {
 } from '@/app/actions/wifi'
 import { ControllerSetup } from './controller-setup'
 import { ImageUpload } from './image-upload'
+import { ColorSchemeSelector } from './color-scheme-selector'
 import { VoucherPrintButtons } from './voucher-print'
 import { AnalyticsTab } from './analytics-tab'
 
@@ -164,6 +166,7 @@ interface PortalSettings {
   backgroundColor: string | null
   primaryColor: string | null
   secondaryColor: string | null
+  colorScheme: string | null
   termsText: string | null
   successRedirectUrl: string | null
   defaultSessionMinutes: number | null
@@ -259,6 +262,7 @@ export function AdminDashboard({
   const [logoUrl, setLogoUrl] = useState(settings.logoUrl || '')
   const [backgroundUrl, setBackgroundUrl] = useState(settings.backgroundUrl || '')
   const [backgroundColor, setBackgroundColor] = useState(settings.backgroundColor || '')
+  const [colorScheme, setColorScheme] = useState(settings.colorScheme || 'default')
   const [termsText, setTermsText] = useState(settings.termsText || '')
   const [successRedirectUrl, setSuccessRedirectUrl] = useState(settings.successRedirectUrl || 'https://google.com')
   const [defaultSession, setDefaultSession] = useState(String(settings.defaultSessionMinutes || 120))
@@ -364,6 +368,7 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
         logoUrl: logoUrl || null,
         backgroundUrl: backgroundUrl || null,
         backgroundColor: backgroundColor || null,
+        colorScheme,
         termsText,
         successRedirectUrl,
         defaultSessionMinutes: defaultSessionUnlimited ? 0 : parseInt(defaultSession),
@@ -2033,6 +2038,23 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
   
   {/* Settings Tab */}
           <TabsContent value="settings">
+            <Card className="bg-card/50 border-border/50 mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-primary" />
+                  Esquema de Cores do Painel
+                </CardTitle>
+                <CardDescription>
+                  Escolha uma identidade visual para o painel e a tela de login. O modo claro/escuro continua no botão do topo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ColorSchemeSelector value={colorScheme} onChange={setColorScheme} />
+                <p className="mt-3 text-xs text-muted-foreground">
+                  A prévia é aplicada na hora. Clique em <span className="font-medium text-foreground">Salvar Configurações</span> para persistir.
+                </p>
+              </CardContent>
+            </Card>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-card/50 border-border/50">
                 <CardHeader>
