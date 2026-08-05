@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, XCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus } from 'lucide-react'
+import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, XCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus, ExternalLink } from 'lucide-react'
 import { updateControllerSettings } from '@/app/actions/wifi'
 import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2 } from '@/app/actions/controller'
+import { toast } from 'sonner'
 
 interface PortalLog {
   timestamp: string
@@ -259,18 +260,41 @@ const handleTest = async () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border">
-            <code className="flex-1 text-sm text-cyan-400 font-mono">{fullPortalUrl}</code>
+          {/* URL em destaque */}
+          <div className="p-4 bg-background/50 rounded-xl border border-cyan-500/20 mb-4">
+            <p className="text-xs text-muted-foreground mb-2">URL do portal captivo</p>
+            <code className="text-sm text-cyan-400 font-mono break-all">{fullPortalUrl}</code>
+          </div>
+
+          {/* Botões de ação */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => copyToClipboard(fullPortalUrl, 'portal-url')}
+              variant="outline"
+              className="flex-1 border-border/50 hover:border-cyan-500/50 hover:text-cyan-400 hover:bg-cyan-500/10"
+              onClick={() => {
+                navigator.clipboard.writeText(fullPortalUrl)
+                toast.success('URL copiada com sucesso!', {
+                  description: fullPortalUrl,
+                  duration: 3000,
+                })
+                setCopied('portal-url')
+                setTimeout(() => setCopied(null), 2000)
+              }}
             >
               {copied === 'portal-url' ? (
-                <Check className="w-4 h-4 text-green-400" />
+                <Check className="w-4 h-4 mr-2 text-green-400" />
               ) : (
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4 mr-2" />
               )}
+              {copied === 'portal-url' ? 'Copiado!' : 'Copiar URL'}
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 border-border/50 hover:border-primary/50 hover:text-primary hover:bg-primary/10"
+              onClick={() => window.open(fullPortalUrl, '_blank')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Abrir Portal
             </Button>
           </div>
         </CardContent>
