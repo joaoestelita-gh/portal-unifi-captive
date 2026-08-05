@@ -324,6 +324,72 @@ export async function fetchUnifiDetailsV2(
   }
 }
 
+interface AuthorizeTestMacResponse {
+  success: boolean
+  message: string
+}
+
+/**
+ * Ferramenta de diagnóstico: autoriza um MAC de teste no controlador UniFi.
+ *
+ * Executa uma autorização REAL (authorize-guest) para validar de ponta a ponta
+ * que as credenciais têm permissão de escrita e que o fluxo de liberação funciona.
+ * Usada apenas para UniFi (Aruba usa redirect/RADIUS e não autoriza MAC por API).
+ */
+export async function authorizeTestMac(
+  url: string,
+  username: string,
+  password: string,
+  site: string,
+  macAddress: string,
+  sessionMinutes = 5
+): Promise<AuthorizeTestMacResponse> {
+  if (!url || !username || !password) {
+    return { success: false, message: 'Preencha URL, usuário e senha do controlador UniFi.' }
+  }
+
+  const normalizedMac = macAddress.trim().toLowerCase().replace(/-/g, ':')
+  const macRegex = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/
+  if (!macRegex.test(normalizedMac)) {
+    return {
+      success: false,
+      message: 'MAC inválido. Use o formato aa:bb:cc:dd:ee:ff (12 dígitos hexadecimais).',
+    }
+  }
+
+  try {
+    const result = await ControllerService.authorizeGuest(
+      {
+        controllerType: 'unifi',
+        unifiEnabled: true,
+        unifiControllerUrl: url,
+        unifiUsername: username,
+        unifiPassword: password,
+        unifiSite: site || 'default',
+      },
+      { macAddress: normalizedMac, sessionMinutes },
+      'unifi'
+    )
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: getSpecificErrorMessage(new Error(result.error || 'Falha na autorização'), 'UniFi'),
+      }
+    }
+
+    return {
+      success: true,
+      message: `MAC ${normalizedMac} autorizado por ${sessionMinutes} min. A liberação está funcionando corretamente.`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: getSpecificErrorMessage(error, 'UniFi'),
+    }
+  }
+}
+
 /**
  * Retorna os tipos de controller suportados pelo sistema.
  */
