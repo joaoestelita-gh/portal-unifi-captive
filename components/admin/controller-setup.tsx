@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, XCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus } from 'lucide-react'
+import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus } from 'lucide-react'
 import { updateControllerSettings } from '@/app/actions/wifi'
 import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2 } from '@/app/actions/controller'
+import { useToast } from '@/hooks/use-toast'
 
 interface PortalLog {
   timestamp: string
@@ -50,6 +51,16 @@ const CONTROLLER_OPTIONS: {
 ]
 
 export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
+  const { toast } = useToast()
+
+  // Exibe erros via toast (substitui o antigo card de mensagem para falhas)
+  const showError = useCallback(
+    (message: string) => {
+      toast({ variant: 'destructive', title: 'Erro', description: message })
+    },
+    [toast],
+  )
+
   const [copied, setCopied] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -160,7 +171,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
       })
       setTestResult({ success: true, message: 'Configurações salvas com sucesso!' })
     } catch {
-      setTestResult({ success: false, message: 'Erro ao salvar configurações' })
+      showError('Erro ao salvar configurações')
     }
     setSaving(false)
   }
@@ -188,17 +199,17 @@ const handleTest = async () => {
         
         setTestResult({ success: true, message })
       } else {
-        setTestResult({ success: false, message: result.message })
+        showError(result.message)
       }
     } catch (error) {
-      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha inesperada ao testar conexão. Verifique os dados e tente novamente.' })
+      showError(error instanceof Error ? error.message : 'Falha inesperada ao testar conexão. Verifique os dados e tente novamente.')
     }
     setTesting(false)
   }
 
   const handleFetchSites = async () => {
     if (!unifiUrl || !unifiUsername || !unifiPassword) {
-      setTestResult({ success: false, message: 'Preencha URL, usuário e senha primeiro' })
+      showError('Preencha URL, usuário e senha primeiro')
       return
     }
     
@@ -215,10 +226,10 @@ const handleTest = async () => {
           setUnifiSite(result.sites[0].id)
         }
       } else {
-        setTestResult({ success: false, message: result.error || 'Nenhum site encontrado' })
+        showError(result.error || 'Nenhum site encontrado')
       }
     } catch (error) {
-      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha ao buscar sites. Verifique as credenciais.' })
+      showError(error instanceof Error ? error.message : 'Falha ao buscar sites. Verifique as credenciais.')
     }
     
     setLoadingSites(false)
@@ -226,7 +237,7 @@ const handleTest = async () => {
 
   const handleFetchSiteInfo = async () => {
     if (!unifiUrl || !unifiUsername || !unifiPassword || !unifiSite) {
-      setTestResult({ success: false, message: 'Preencha todos os campos e selecione um site' })
+      showError('Preencha todos os campos e selecione um site')
       return
     }
     
@@ -239,10 +250,10 @@ const handleTest = async () => {
         setSiteInfo(result.info)
         setTestResult({ success: true, message: 'Informações carregadas!' })
       } else {
-        setTestResult({ success: false, message: result.error || 'Falha ao buscar informações do site' })
+        showError(result.error || 'Falha ao buscar informações do site')
       }
     } catch (error) {
-      setTestResult({ success: false, message: error instanceof Error ? error.message : 'Falha ao buscar informações. Verifique a conexão com o controller.' })
+      showError(error instanceof Error ? error.message : 'Falha ao buscar informações. Verifique a conexão com o controller.')
     }
     
     setLoadingInfo(false)
@@ -347,14 +358,10 @@ const handleTest = async () => {
         </CardContent>
       </Card>
 
-      {/* Mensagem de resultado */}
-      {testResult && (
-        <div className={`p-3 rounded-xl text-sm flex items-center gap-2 ${
-          testResult.success 
-            ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
-            : 'bg-red-500/10 border border-red-500/30 text-red-400'
-        }`}>
-          {testResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+      {/* Mensagem de sucesso (erros são exibidos via toast) */}
+      {testResult?.success && (
+        <div className="p-3 rounded-xl text-sm flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <CheckCircle className="w-4 h-4" />
           {testResult.message}
         </div>
       )}
@@ -449,11 +456,11 @@ const handleTest = async () => {
                       ) : (
                         <RefreshCw className="w-4 h-4" />
                       )}
-                      <span className="ml-2 hidden sm:inline">Buscar Sites</span>
+                      <span className="ml-2 hidden sm:inline">Sincronizar Sites</span>
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Clique em &quot;Buscar Sites&quot; para listar os dispositivos disponíveis
+                    Clique em &quot;Sincronizar Sites&quot; para listar os dispositivos disponíveis
                   </p>
                 </div>
               </div>
