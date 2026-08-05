@@ -2017,11 +2017,11 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
             </div>
           </div>
           <div className="flex gap-2 pt-4">
-            <Button onClick={handleUpdateAdmin} className="bg-primary hover:bg-primary/90">
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Salvar Alteracoes
+            <Button onClick={handleUpdateAdmin} disabled={updatingAdmin} className="bg-primary hover:bg-primary/90 transition-all duration-200">
+              {updatingAdmin ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+              {updatingAdmin ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
-            <Button variant="outline" onClick={() => setEditingAdmin(null)}>
+            <Button variant="outline" onClick={() => setEditingAdmin(null)} disabled={updatingAdmin}>
               Cancelar
             </Button>
           </div>
@@ -2251,10 +2251,10 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
                       />
                     </div>
                   </div>
-                  <Button onClick={handleSaveSettings} className="w-full bg-primary hover:bg-primary/90">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Salvar Configurações
-                  </Button>
+            <Button onClick={handleSaveSettings} disabled={savingSettings} className="w-full bg-primary hover:bg-primary/90 transition-all duration-200">
+              {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              {savingSettings ? 'Salvando...' : 'Salvar Configurações'}
+            </Button>
                 </CardContent>
               </Card>
             </div>
