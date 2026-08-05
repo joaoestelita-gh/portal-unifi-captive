@@ -60,6 +60,7 @@ export interface PortalSettings {
   backgroundColor: string | null
   primaryColor: string | null
   secondaryColor: string | null
+  colorScheme: string | null
   termsText: string | null
   defaultSessionMinutes: number | null
   defaultDailyMinutes: number | null
