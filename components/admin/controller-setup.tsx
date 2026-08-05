@@ -66,6 +66,19 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  // Resultado detalhado do teste de conexão UniFi (mantido até o próximo teste)
+  const [connectionInfo, setConnectionInfo] = useState<{
+    model?: string
+    version?: string
+    status?: string
+    siteName?: string
+    totalSites?: number
+    aps?: number
+    switches?: number
+    gateways?: number
+    clientsOnline?: number
+    guestsOnline?: number
+  } | null>(null)
   
   // Controller type
   const [controllerType, setControllerType] = useState<ControllerTypeValue>(
@@ -179,25 +192,14 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
 const handleTest = async () => {
     setTesting(true)
     setTestResult(null)
+    setConnectionInfo(null)
     try {
       await handleSave()
       const result = await testUnifiConnectionV2(unifiUrl, unifiUsername, unifiPassword, unifiSite)
       if (result.success) {
-        const d = result.details
-        const detailParts = []
-        if (d?.model) detailParts.push(`Modelo: ${d.model}`)
-        if (d?.version) detailParts.push(`v${d.version}`)
-        if (d?.status) detailParts.push(`Status: ${d.status}`)
-        if (d?.aps !== undefined) detailParts.push(`${d.aps} AP(s)`)
-        if (d?.switches !== undefined) detailParts.push(`${d.switches} Switch(es)`)
-        if (d?.clientsOnline !== undefined) detailParts.push(`${d.clientsOnline} clientes online`)
-        if (d?.totalSites !== undefined) detailParts.push(`${d.totalSites} site(s)`)
-        
-        const message = detailParts.length > 0
-          ? `Conexão estabelecida! ${detailParts.join(' · ')}`
-          : result.message
-        
-        setTestResult({ success: true, message })
+        // Exibe o card visual com os detalhes; limpa a linha de texto do "Salvar"
+        setTestResult(null)
+        setConnectionInfo(result.details ?? {})
       } else {
         showError(result.message)
       }
@@ -365,6 +367,63 @@ const handleTest = async () => {
           {testResult.message}
         </div>
       )}
+
+      {/* Resultado detalhado do teste de conexão UniFi (visível até o próximo teste) */}
+      {connectionInfo && (() => {
+        const statusRaw = (connectionInfo.status || 'online').toLowerCase()
+        const isOnline = !['offline', 'down', 'disconnected', 'error'].some(s => statusRaw.includes(s))
+        const fmt = (v?: number) => (v === undefined || v === null ? '—' : String(v))
+        const statTiles = [
+          { label: 'Versão UniFi', value: connectionInfo.version ? `v${connectionInfo.version}` : '—' },
+          { label: 'Modelo da Controladora', value: connectionInfo.model || '—' },
+          { label: 'APs Conectados', value: fmt(connectionInfo.aps) },
+          { label: 'Switches', value: fmt(connectionInfo.switches) },
+          { label: 'Clientes Online', value: fmt(connectionInfo.clientsOnline) },
+          { label: 'Total de Sites', value: fmt(connectionInfo.totalSites) },
+          { label: 'Convidados Online', value: fmt(connectionInfo.guestsOnline) },
+        ]
+        return (
+          <Card className="bg-card/50 border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Wifi className="w-4 h-4 text-primary" />
+                  Resultado do Teste de Conexão
+                </CardTitle>
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+              </div>
+              {connectionInfo.siteName && (
+                <CardDescription>Site: {connectionInfo.siteName}</CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Status como badge verde/vermelho */}
+                <div className="rounded-xl border border-border/50 bg-secondary/30 p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <span
+                    className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      isOnline
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/30'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                    {isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+
+                {statTiles.map((tile) => (
+                  <div key={tile.label} className="rounded-xl border border-border/50 bg-secondary/30 p-3">
+                    <p className="text-xs text-muted-foreground text-pretty">{tile.label}</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground truncate">{tile.value}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Configurações UniFi */}
       {(controllerType === 'unifi' || controllerType === 'both') && (
