@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Wifi, Router, Ticket, Users, LayoutGrid, BookOpen, Layers } from 'lucide-react'
+import { ArrowLeft, Wifi, Router, Ticket, Users, LayoutGrid, BookOpen, Layers, Palette } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { COLOR_SCHEMES } from '@/lib/color-schemes'
 
-type SectionId = 'overview' | 'aruba' | 'unifi' | 'both' | 'vouchers' | 'users'
+type SectionId = 'overview' | 'aruba' | 'unifi' | 'both' | 'vouchers' | 'users' | 'customization'
 
 const sections: { id: SectionId; label: string; icon: typeof Wifi }[] = [
   { id: 'overview', label: 'Visão Geral', icon: LayoutGrid },
@@ -15,6 +16,7 @@ const sections: { id: SectionId; label: string; icon: typeof Wifi }[] = [
   { id: 'both', label: 'Ambas (UniFi + Aruba)', icon: Layers },
   { id: 'vouchers', label: 'Vouchers', icon: Ticket },
   { id: 'users', label: 'Usuários', icon: Users },
+  { id: 'customization', label: 'Personalização', icon: Palette },
 ]
 
 export function HelpCenter() {
@@ -70,6 +72,7 @@ export function HelpCenter() {
           {active === 'both' && <BothSection />}
           {active === 'vouchers' && <VouchersSection />}
           {active === 'users' && <UsersSection />}
+          {active === 'customization' && <CustomizationSection />}
         </main>
       </div>
     </div>
@@ -417,6 +420,34 @@ function UnifiSection() {
           </ul>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Diagnóstico: Autorizar MAC de teste</CardTitle></CardHeader>
+        <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
+          <p>
+            Na aba <strong className="text-foreground">Controladora</strong> existe a ferramenta
+            <strong className="text-foreground"> Autorizar MAC de teste</strong>. Ela valida, de ponta a ponta, se o
+            sistema consegue liberar um dispositivo na controladora UniFi sem precisar conectar um cliente real na rede.
+          </p>
+          <ol className="flex flex-col gap-3">
+            {[
+              ['Salve as credenciais', 'Preencha e salve URL, usuário, senha e site do UniFi antes de usar a ferramenta'],
+              ['Informe o MAC', 'Digite o endereço MAC do dispositivo de teste (ex: aa:bb:cc:dd:ee:ff)'],
+              ['Autorizar MAC', 'O sistema envia a autorização via API por 5 minutos'],
+              ['Confira o resultado', 'Um toast confirma o sucesso ou mostra o erro retornado pela controladora'],
+            ].map(([t, d], i) => (
+              <li key={i} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">{i + 1}</span>
+                <span><strong className="text-foreground">{t}:</strong> {d}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-blue-300">
+            A autorização de teste dura <strong className="text-blue-200">5 minutos</strong> e serve apenas para
+            diagnóstico. É exclusiva do UniFi (a Aruba autoriza via RADIUS, não por API).
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -596,6 +627,94 @@ function UsersSection() {
               </li>
             ))}
           </ol>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/* ---------- Personalização ---------- */
+function CustomizationSection() {
+  return (
+    <div className="flex flex-col gap-6">
+      <SectionHeader
+        icon={Palette}
+        title="Personalização"
+        subtitle="Aparência do painel e do portal captivo"
+      />
+
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Duas aparências independentes</CardTitle></CardHeader>
+        <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-3">
+          <p>
+            O sistema tem <strong className="text-foreground">duas telas de login distintas</strong>, com aparências
+            configuradas separadamente:
+          </p>
+          <ul className="flex flex-col gap-2 list-disc pl-5">
+            <li>
+              <strong className="text-foreground">Painel administrativo</strong> (onde o admin entra): usa o
+              <strong className="text-foreground"> Esquema de Cores</strong> escolhido abaixo.
+            </li>
+            <li>
+              <strong className="text-foreground">Portal captivo</strong> (o que o visitante vê no WiFi): usa a
+              <strong className="text-foreground"> Aparência do Portal</strong> (logo, imagem/cor de fundo e cor primária).
+            </li>
+          </ul>
+          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-blue-300">
+            As duas são independentes de propósito: o portal do visitante costuma ter a identidade da marca,
+            enquanto o painel segue o tema interno da equipe.
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Esquema de Cores do Painel</CardTitle></CardHeader>
+        <CardContent className="text-sm text-muted-foreground leading-relaxed flex flex-col gap-4">
+          <p>
+            Em <strong className="text-foreground">Configurações &gt; Esquema de Cores do Painel</strong> você escolhe
+            um tema fechado (sem precisar definir cores individuais). A prévia é aplicada na hora; clique em
+            <strong className="text-foreground"> Salvar Configurações</strong> para persistir. Vale para o painel e
+            para a tela de login do admin. O botão sol/lua continua controlando o modo claro/escuro.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {COLOR_SCHEMES.map((scheme) => (
+              <div key={scheme.id} className="flex items-center gap-3 rounded-lg border border-border/50 p-3">
+                <div className="flex shrink-0 gap-1">
+                  <span className="h-6 w-6 rounded-full border border-border/50" style={{ backgroundColor: scheme.swatches.primary }} />
+                  <span className="h-6 w-6 rounded-full border border-border/50" style={{ backgroundColor: scheme.swatches.accent }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground">{scheme.label}</p>
+                  <p className="text-xs text-muted-foreground">{scheme.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Aparência do Portal Captivo</CardTitle></CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Ainda em <strong className="text-foreground">Configurações</strong>, personalize o que o visitante vê ao
+            conectar. Esses campos <strong className="text-foreground">não</strong> usam o esquema de cores do painel.
+          </p>
+          <Table
+            head={['Campo', 'Função']}
+            rows={[
+              ['Título do Portal', 'Texto exibido no topo da tela de login do visitante'],
+              ['Logo', 'Imagem da marca mostrada no portal (upload ou URL)'],
+              ['Imagem de Fundo', 'Fundo da tela de login; se preenchida, tem prioridade sobre a cor'],
+              ['Cor de Fundo', 'Cor sólida usada quando não há imagem de fundo'],
+              ['Cor Primária', 'Cor dos botões e destaques do portal'],
+              ['Termos de Uso', 'Texto de termos exibido ao visitante antes do acesso'],
+            ]}
+          />
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300 text-sm">
+            Sem imagem e sem cor de fundo selecionada, o portal usa um <strong className="text-amber-200">gradiente padrão</strong>.
+            Use o botão <strong className="text-amber-200">Usar padrão</strong> para limpar a cor escolhida.
+          </div>
         </CardContent>
       </Card>
     </div>
