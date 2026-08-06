@@ -30,7 +30,7 @@ export function HelpCenter() {
             Voltar ao painel
           </Button>
           <div className="flex items-center gap-2 text-foreground">
-            <BookOpen className="w-5 h-5 text-green-400" />
+            <BookOpen className="w-5 h-5 text-primary" />
             <span className="font-semibold">Central de Ajuda</span>
           </div>
         </div>
@@ -49,7 +49,7 @@ export function HelpCenter() {
                     onClick={() => setActive(s.id)}
                     className={`flex items-center gap-2 w-full rounded-lg px-3 py-2 text-sm transition-colors ${
                       isActive
-                        ? 'bg-green-500/10 text-green-400 font-medium'
+                        ? 'bg-primary/10 text-primary font-medium'
                         : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                     }`}
                   >
@@ -80,7 +80,7 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: typeof Wifi; tit
   return (
     <header className="mb-6">
       <div className="flex items-center gap-3 mb-2">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-500/10 text-green-400">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Icon className="w-6 h-6" />
         </div>
         <div>
@@ -147,7 +147,7 @@ function OverviewSection() {
               ['Autorização na controladora', 'O sistema libera o acesso pelo tempo definido'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">{i + 1}</span>
                 <span className="text-muted-foreground"><strong className="text-foreground">{t}:</strong> {d}</span>
               </li>
             ))}
@@ -211,9 +211,9 @@ function ArubaSection() {
             <strong className="text-foreground"> URL do portal</strong>, o <strong className="text-foreground">domínio permitido</strong> e
             os <strong className="text-foreground">campos do servidor RADIUS</strong> que você deve preencher na tela do Aruba.
           </p>
-          <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">
-            A autenticação acontece no <strong className="text-green-200">FreeRADIUS</strong> instalado na sua VPS.
-            Veja o guia <strong className="text-green-200">docs/INSTALACAO-FREERADIUS.md</strong> para configurar o servidor.
+          <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-foreground">
+            A autenticação acontece no <strong className="text-primary">FreeRADIUS</strong> instalado na sua VPS.
+            Veja o guia <strong className="text-primary">docs/INSTALACAO-FREERADIUS.md</strong> para configurar o servidor.
           </div>
         </CardContent>
       </Card>
@@ -248,7 +248,7 @@ function ArubaSection() {
               ['Salvar', 'Confirme as configurações'],
             ].map(([local, acao], i) => (
               <li key={i} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">{i + 1}</span>
                 <span className="text-muted-foreground"><strong className="text-foreground">{local}:</strong> {acao}</span>
               </li>
             ))}
@@ -398,7 +398,7 @@ function UnifiSection() {
               ['Salvar Configuração', 'Confirme para gravar os dados no sistema'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">{i + 1}</span>
                 <span className="text-muted-foreground"><strong className="text-foreground">{t}:</strong> {d}</span>
               </li>
             ))}
@@ -519,7 +519,7 @@ function VouchersSection() {
               ['Distribuir', 'Entregue o código ao visitante'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">{i + 1}</span>
                 <span className="text-muted-foreground"><strong className="text-foreground">{t}:</strong> {d}</span>
               </li>
             ))}
@@ -591,7 +591,7 @@ function UsersSection() {
               ['Aprovar ou bloquear', 'Decida o acesso de cada um'],
             ].map(([t, d], i) => (
               <li key={i} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-400 text-xs font-medium">{i + 1}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">{i + 1}</span>
                 <span className="text-muted-foreground"><strong className="text-foreground">{t}:</strong> {d}</span>
               </li>
             ))}

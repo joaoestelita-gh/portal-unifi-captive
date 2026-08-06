@@ -22,8 +22,8 @@ export const COLOR_SCHEMES: ColorSchemeMeta[] = [
   {
     id: 'default',
     label: 'Padrão',
-    description: 'Ciano e verde — o tema original do portal.',
-    swatches: { primary: 'oklch(0.6 0.13 200)', accent: 'oklch(0.62 0.15 160)', background: 'oklch(0.12 0 0)' },
+    description: 'Azul-índigo — o tema padrão do portal.',
+    swatches: { primary: 'oklch(0.55 0.19 262)', accent: 'oklch(0.62 0.13 238)', background: 'oklch(0.12 0 0)' },
   },
   {
     id: 'grafana',
