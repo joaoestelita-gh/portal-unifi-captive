@@ -1,0 +1,38 @@
+# =============================================================================
+# Portal CenterNet — Docker Compose para Produção
+#
+# Uso:
+#   1. Copie .env.example para .env e preencha os valores
+#   2. docker compose up -d
+#   3. Acesse: http://localhost:3000
+#
+# Para atualizar:
+#   docker compose pull && docker compose up -d
+# =============================================================================
+
+services:
+  portal:
+    build: .
+    container_name: centernet-portal
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Limites de recursos (ajuste conforme o plano AWS)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.5"

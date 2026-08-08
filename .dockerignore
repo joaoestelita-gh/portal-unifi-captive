@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build
+.next
+out
+
+# Git
+.git
+.gitignore
+
+# Environment (nunca incluir secrets na imagem!)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Docs (não precisa em produção)
+docs/
+README.md
+
+# Drizzle migrations (opcional — inclui se usar push)
+# drizzle/
