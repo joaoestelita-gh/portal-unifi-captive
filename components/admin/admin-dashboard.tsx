@@ -98,6 +98,7 @@ import { ImageUpload } from './image-upload'
 import { ColorSchemeSelector } from './color-scheme-selector'
 import { VoucherPrintButtons } from './voucher-print'
 import { AnalyticsTab } from './analytics-tab'
+import { PreauthMacsTab } from './preauth-macs-tab'
 
 // Paleta de cores pré-definidas para o fundo da tela de login.
 // `dark: true` indica fundo escuro (o ícone de seleção fica branco).
@@ -191,24 +192,38 @@ interface Admin {
   createdAt: Date
 }
 
+interface PreauthMac {
+  id: string
+  macAddress: string
+  label: string | null
+  status: string
+  linkedUserId: string | null
+  linkedAt: Date | null
+  createdAt: Date
+  userName: string | null
+  userEmail: string | null
+}
+
 interface AdminDashboardProps {
   stats: DashboardStats
   users: WifiUser[]
   sessions: WifiSession[]
   vouchers: Voucher[]
   pendingUsers: WifiUser[]
+  preauthMacs: PreauthMac[]
   settings: PortalSettings
   adminName: string
 }
 
-export function AdminDashboard({ 
-  stats, 
-  users, 
-  sessions, 
+export function AdminDashboard({
+  stats,
+  users,
+  sessions,
   vouchers,
   pendingUsers,
+  preauthMacs,
   settings,
-  adminName 
+  adminName
 }: AdminDashboardProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
@@ -731,6 +746,17 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
           >
             <Ticket className="w-5 h-5" />
             Vouchers
+          </button>
+          <button
+            onClick={() => setActiveTab('preauth')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'preauth'
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`}
+          >
+            <Smartphone className="w-5 h-5" />
+            MACs
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
@@ -1816,6 +1842,11 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Pre-authorized MACs Tab */}
+          <TabsContent value="preauth">
+            <PreauthMacsTab preauthMacs={preauthMacs} users={users} />
           </TabsContent>
 
           {/* Analytics Tab */}

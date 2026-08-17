@@ -81,6 +81,35 @@ export const updatePortalSettingsSchema = z.object({
   requireApproval: z.boolean().optional().nullable(),
 })
 
+// --- MAC address helpers ---
+
+/**
+ * Normaliza um MAC address para o formato canônico `aa:bb:cc:dd:ee:ff`
+ * (minúsculo, separado por `:`). Remove separadores comuns (`:`, `-`, `.`,
+ * espaços) antes de validar. Retorna `null` se não forem exatamente 12
+ * dígitos hexadecimais.
+ *
+ * O UniFi já envia o MAC em minúsculas; normalizar dos dois lados garante o
+ * casamento MAC↔lista independente de caixa/separador de origem.
+ */
+export function normalizeMac(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const hex = raw.replace(/[^0-9a-fA-F]/g, '').toLowerCase()
+  if (hex.length !== 12) return null
+  return hex.match(/.{2}/g)!.join(':')
+}
+
+// --- Pre-authorized MAC validations ---
+
+export const preauthMacSchema = z.object({
+  mac: z.string().min(1, 'MAC é obrigatório').max(50),
+  label: z.string().max(200).optional().nullable(),
+})
+
+export const preauthImportSchema = z.object({
+  rawText: z.string().min(1, 'Cole ao menos um MAC').max(200000),
+})
+
 // --- Controller Settings ---
 
 export const updateControllerSettingsSchema = z.object({
