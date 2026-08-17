@@ -152,6 +152,26 @@ export const wifiUserDevices = pgTable('wifi_user_devices', {
   index('wifi_user_devices_mac_idx').on(table.macAddress),
 ])
 
+// --- Pre-authorized MACs -------------------------------------------------
+// Lista de MACs "pré-autorizados": ao se cadastrar/logar com um desses MACs,
+// o usuário é aprovado automaticamente (pula a fila de aprovação manual).
+// Cada entrada nasce "pending" (não vinculada) e vira "linked" quando um
+// usuário se cadastra/loga com aquele dispositivo.
+export const wifiPreauthorizedMacs = pgTable('wifi_preauthorized_macs', {
+  id: text('id').primaryKey(),
+  macAddress: text('macAddress').notNull().unique(), // normalizado: aa:bb:cc:dd:ee:ff
+  label: text('label'),                              // rótulo/observação (ex.: "Notebook Diretoria")
+  status: text('status').notNull().default('pending'), // pending (não vinculado) | linked
+  linkedUserId: text('linkedUserId'),                // wifiUsers.id quando vinculado
+  linkedAt: timestamp('linkedAt'),
+  createdBy: text('createdBy'),                       // id do admin que importou
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+}, (table) => [
+  index('wifi_preauth_macs_mac_idx').on(table.macAddress),
+  index('wifi_preauth_macs_status_idx').on(table.status),
+])
+
 export const portalSettings = pgTable('portal_settings', {
   id: text('id').primaryKey().default('default'),
   portalTitle: text('portalTitle').default('WiFi Gratuito'),

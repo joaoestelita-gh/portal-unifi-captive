@@ -16,6 +16,7 @@ import { hashPassword } from '@/lib/crypto'
 import { registerWifiUserSchema } from '@/lib/validations'
 import { calculateTrustExpiry, MAX_DEVICES_PER_USER, DEFAULT_SPEED_UP_KBPS, DEFAULT_SPEED_DOWN_KBPS } from '@/lib/constants'
 import { ControllerService } from '@/lib/controllers'
+import { findPreauthorizedByMac, markPreauthLinked } from '@/lib/preauth'
 import { getPortalSettings } from './portal-settings'
 
 // ============================================================================
@@ -88,6 +89,7 @@ export async function registerWifiUser(data: {
   email: string
   phone?: string
   password: string
+  macAddress?: string
 }) {
   const parsed = registerWifiUserSchema.safeParse(data)
   if (!parsed.success) {
@@ -102,13 +104,18 @@ export async function registerWifiUser(data: {
     return { success: false, error: 'Email já cadastrado' }
   }
 
+  // MAC pré-autorizado → aprova automaticamente (ignora requireApproval).
+  const preauth = await findPreauthorizedByMac(data.macAddress)
+  const requiresApproval = preauth ? false : !!settings.requireApproval
+
   const newUser = {
     id: nanoid(),
     name: parsed.data.name,
     email: parsed.data.email,
     phone: parsed.data.phone || null,
     password: hashedPw,
-    status: settings.requireApproval ? 'pending' : 'approved',
+    macAddress: data.macAddress || null,
+    status: requiresApproval ? 'pending' : 'approved',
     dailyLimitMinutes: settings.defaultDailyMinutes,
     sessionLimitMinutes: settings.defaultSessionMinutes,
     speedLimitDown: settings.defaultSpeedDown,
@@ -119,9 +126,17 @@ export async function registerWifiUser(data: {
 
   await db.insert(wifiUsers).values(newUser)
 
+  // Vincula a entrada pré-autorizada ao novo usuário e registra o dispositivo.
+  if (preauth) {
+    await markPreauthLinked(preauth, newUser.id)
+    if (data.macAddress) {
+      await registerDevice(newUser.id, data.macAddress)
+    }
+  }
+
   return {
     success: true,
-    requiresApproval: settings.requireApproval,
+    requiresApproval,
     userId: newUser.id,
   }
 }
