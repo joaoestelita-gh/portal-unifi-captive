@@ -109,6 +109,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
       email: registerEmail,
       phone: registerPhone || undefined,
       password: registerPassword,
+      macAddress: macAddress || undefined,
     })
     
     if (result.success) {

@@ -59,6 +59,16 @@ export {
   deleteVoucher,
 } from './wifi-vouchers'
 
+// Pré-autorização de MACs
+export {
+  importPreauthorizedMacs,
+  addPreauthorizedMac,
+  getPreauthorizedMacs,
+  deletePreauthorizedMac,
+  linkPreauthorizedMacToUser,
+  unlinkPreauthorizedMac,
+} from './wifi-preauth'
+
 // WiFi Stats
 export {
   getDashboardStats,
