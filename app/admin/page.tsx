@@ -7,7 +7,7 @@ import {
   getActiveSessions, 
   getVouchers,
   getPendingUsers,
-  getPortalSettings
+  getPortalSettingsForClient
 } from '@/app/actions/wifi'
 
 export default async function AdminPage() {
@@ -28,7 +28,7 @@ export default async function AdminPage() {
     getActiveSessions(),
     getVouchers(),
     getPendingUsers(),
-    getPortalSettings(),
+    getPortalSettingsForClient(),
   ])
 
   return (

@@ -27,6 +27,9 @@ export type { PortalControllerSettings } from './controller.service'
 // Factory (configuração / admin)
 export { ControllerFactory } from './controller.factory'
 
+// Adapter cloud (métodos estáticos de descoberta usados na UI de setup)
+export { UnifiCloudAdapter } from './adapters/unifi-cloud.adapter'
+
 // Interface (para tipagem em parâmetros)
 export type { WifiControllerAdapter, ControllerCapability } from './wifi-controller.adapter'
 

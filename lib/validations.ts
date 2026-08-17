@@ -72,10 +72,13 @@ export const updatePortalSettingsSchema = z.object({
   backgroundColor: z.string().max(20).optional().nullable(),
   primaryColor: z.string().max(20).optional().nullable(),
   secondaryColor: z.string().max(20).optional().nullable(),
+  colorScheme: z.string().max(40).optional().nullable(),
   termsText: z.string().max(5000).optional().nullable(),
-  successRedirectUrl: z.string().url('URL de redirecionamento inválida').max(500).optional().nullable(),
-  defaultSessionMinutes: z.number().int().min(1).max(1440).optional().nullable(),
-  defaultDailyMinutes: z.number().int().min(1).max(1440).optional().nullable(),
+  // Aceita vazio (fallback padrão aplicado depois) e não força formato absoluto.
+  successRedirectUrl: z.string().max(500).optional().nullable(),
+  // 0 = ilimitado (sem sessão limitada); por isso min(0), não min(1).
+  defaultSessionMinutes: z.number().int().min(0).max(1440).optional().nullable(),
+  defaultDailyMinutes: z.number().int().min(0).max(1440).optional().nullable(),
   defaultSpeedDown: z.number().int().min(0).optional().nullable(),
   defaultSpeedUp: z.number().int().min(0).optional().nullable(),
   requireApproval: z.boolean().optional().nullable(),
@@ -84,13 +87,19 @@ export const updatePortalSettingsSchema = z.object({
 // --- Controller Settings ---
 
 export const updateControllerSettingsSchema = z.object({
-  controllerType: z.enum(['none', 'unifi', 'aruba', 'both']),
+  controllerType: z.enum(['none', 'unifi', 'unifi-cloud', 'aruba', 'both']),
   unifiEnabled: z.boolean().optional(),
   arubaEnabled: z.boolean().optional(),
+  // UniFi local (login por cookie)
   unifiControllerUrl: z.string().max(500).default(''),
   unifiUsername: z.string().max(100).default(''),
   unifiPassword: z.string().max(200).default(''),
   unifiSite: z.string().max(100).default('default'),
+  // UniFi Cloud (Site Manager API + Connector Proxy)
+  unifiApiKey: z.string().max(400).default(''),
+  unifiConsoleId: z.string().max(200).default(''),
+  unifiSiteId: z.string().max(200).default(''),
+  // Aruba Instant On
   arubaControllerUrl: z.string().max(500).default(''),
   arubaClientId: z.string().max(200).default(''),
   arubaClientSecret: z.string().max(200).default(''),
