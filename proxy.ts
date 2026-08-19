@@ -38,7 +38,7 @@ function isAdminRoute(pathname: string): boolean {
   )
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Ignorar arquivos estáticos e Next.js internals
