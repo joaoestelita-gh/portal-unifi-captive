@@ -18,7 +18,7 @@
 
 import type { WifiControllerAdapter } from './wifi-controller.adapter'
 import type { ControllerType, ControllerConfig } from './types'
-import { UnifiAdapter, ArubaAdapter, MikrotikAdapter, OmadaAdapter } from './adapters'
+import { UnifiAdapter, UnifiCloudAdapter, ArubaAdapter, MikrotikAdapter, OmadaAdapter } from './adapters'
 
 /**
  * Registry de adapters disponíveis.
@@ -29,6 +29,7 @@ import { UnifiAdapter, ArubaAdapter, MikrotikAdapter, OmadaAdapter } from './ada
  */
 const ADAPTER_REGISTRY = new Map<ControllerType, () => WifiControllerAdapter>([
   ['unifi', () => new UnifiAdapter()],
+  ['unifi-cloud', () => new UnifiCloudAdapter()],
   ['aruba', () => new ArubaAdapter()],
   ['mikrotik', () => new MikrotikAdapter()],
   ['omada', () => new OmadaAdapter()],

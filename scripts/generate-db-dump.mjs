@@ -191,7 +191,10 @@ async function main() {
   lines.push('')
 
   const sql = lines.join('\n')
-  const outPath = 'public/db-dump.sql'
+  // IMPORTANTE: nunca gravar em public/ — arquivos ali são servidos publicamente
+  // pelo Next (https://<host>/db-dump.sql) e este dump contém segredos/PII.
+  // Sobrescrevível via env DB_DUMP_OUT para integrações de backup.
+  const outPath = process.env.DB_DUMP_OUT || 'backups/db-dump.sql'
   mkdirSync(dirname(outPath), { recursive: true })
   writeFileSync(outPath, sql, 'utf8')
 

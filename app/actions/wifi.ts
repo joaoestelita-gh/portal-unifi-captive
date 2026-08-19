@@ -16,6 +16,7 @@
 // Portal Settings
 export {
   getPortalSettings,
+  getPortalSettingsForClient,
   updatePortalSettings,
   updateControllerSettings,
   updateUnifiSettings,

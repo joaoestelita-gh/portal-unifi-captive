@@ -94,31 +94,43 @@ export async function getSession() {
   }
 }
 
+// Mensagem única para qualquer falha de autenticação: não revela se o e-mail
+// existe (evita user enumeration).
+const INVALID_CREDENTIALS_MESSAGE = 'E-mail ou senha inválidos'
+
+// Hash "dummy" usado para equalizar o tempo de resposta quando o e-mail não
+// existe (evita distinguir "usuário inexistente" por timing).
+let dummyHashPromise: Promise<string> | null = null
+function getDummyHash(): Promise<string> {
+  if (!dummyHashPromise) {
+    dummyHashPromise = hashPassword('invalid-placeholder-password')
+  }
+  return dummyHashPromise
+}
+
 export async function signIn(email: string, password: string) {
   const result = await db
     .select()
     .from(users)
     .where(eq(users.email, email))
     .limit(1)
-  
-  if (result.length === 0) {
-    throw new Error('Usuário não encontrado')
-  }
-  
+
   const user = result[0]
-  
-  if (!user.password) {
-    throw new Error('Senha não configurada')
+
+  if (!user || !user.password) {
+    // Gasta o mesmo tempo de um bcrypt.compare real e responde genericamente.
+    await verifyPassword(password, await getDummyHash())
+    throw new Error(INVALID_CREDENTIALS_MESSAGE)
   }
-  
+
   const valid = await verifyPassword(password, user.password)
-  
+
   if (!valid) {
-    throw new Error('Senha incorreta')
+    throw new Error(INVALID_CREDENTIALS_MESSAGE)
   }
-  
+
   await createSession(user.id)
-  
+
   return { id: user.id, email: user.email, name: user.name, role: user.role }
 }
 

@@ -190,19 +190,23 @@ export const portalSettings = pgTable('portal_settings', {
   defaultSpeedDown: integer('defaultSpeedDown').default(10240),
   defaultSpeedUp: integer('defaultSpeedUp').default(5120),
   requireApproval: boolean('requireApproval').default(true),
-  // Controller Type: 'unifi' | 'aruba' | 'none' | 'both'
+  // Controller Type: 'unifi' | 'unifi-cloud' | 'aruba' | 'none' | 'both'
   controllerType: text('controllerType').default('none'),
   // Enable individual controllers (for 'both' mode)
   unifiEnabled: boolean('unifiEnabled').default(false),
   arubaEnabled: boolean('arubaEnabled').default(false),
-  // UniFi Controller Settings
+  // UniFi Controller Settings (local — login por cookie)
   unifiControllerUrl: text('unifiControllerUrl'),
   unifiUsername: text('unifiUsername'),
-  unifiPassword: text('unifiPassword'),
+  unifiPassword: text('unifiPassword'), // criptografado em repouso (ver lib/secret-crypto)
   unifiSite: text('unifiSite').default('default'),
+  // UniFi Cloud (Site Manager API + Connector Proxy — autenticação por X-API-KEY)
+  unifiApiKey: text('unifiApiKey'), // criptografado em repouso (ver lib/secret-crypto)
+  unifiConsoleId: text('unifiConsoleId'), // hostId do console no Site Manager (api.ui.com/v1/hosts)
+  unifiSiteId: text('unifiSiteId'), // id do site na Integration API (distinto de unifiSite "name")
   // HP Aruba Instant On Settings
   arubaControllerUrl: text('arubaControllerUrl'),
   arubaClientId: text('arubaClientId'),
-  arubaClientSecret: text('arubaClientSecret'),
+  arubaClientSecret: text('arubaClientSecret'), // criptografado em repouso (ver lib/secret-crypto)
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })

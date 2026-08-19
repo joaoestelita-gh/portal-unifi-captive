@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
+import { safeEqual } from '@/lib/timing-safe'
 
 /**
  * Endpoint de setup inicial do portal.
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
       const authHeader = request.headers.get('authorization')
       const setupSecret = process.env.CRON_SECRET
 
-      if (!setupSecret || authHeader !== `Bearer ${setupSecret}`) {
+      if (!setupSecret || !safeEqual(authHeader, `Bearer ${setupSecret}`)) {
         return NextResponse.json(
           { success: false, error: 'Setup já realizado. Faça login em /admin/login' },
           { status: 403 }

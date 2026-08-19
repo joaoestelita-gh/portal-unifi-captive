@@ -1,5 +1,17 @@
-// Store last 20 portal access logs in memory (for debugging only)
-// In production, you might want to store this in a database
+/**
+ * Buffer em memória com os últimos acessos ao portal (apenas para debug).
+ *
+ * LIMITAÇÃO CONHECIDA (best-effort): este armazenamento é POR PROCESSO. Com
+ * `output: 'standalone'` + múltiplas réplicas (Docker/AWS) ou após um restart,
+ * os logs NÃO são compartilhados nem persistidos — cada instância vê apenas os
+ * acessos que ela mesma atendeu. É aceitável por ser uma ferramenta de
+ * diagnóstico efêmera; para auditoria persistente, migrar para uma tabela
+ * Postgres (ex.: `portal_access_logs`) e ler/gravar via Drizzle.
+ *
+ * (O adapter UniFi Cloud não usa cache de sessão em memória — autentica por
+ * X-API-KEY a cada request. O adapter UniFi local mantém um `sessionCache`
+ * por processo que se auto-recupera em respostas 401.)
+ */
 
 export interface PortalLog {
   timestamp: string

@@ -9,8 +9,10 @@
  * A UI NUNCA conversa diretamente com a API de nenhum fabricante.
  */
 
-import { ControllerService, ControllerFactory } from '@/lib/controllers'
+import { ControllerService, ControllerFactory, UnifiCloudAdapter } from '@/lib/controllers'
 import type { ControllerType, ControllerConfig } from '@/lib/controllers'
+import { getPortalSettings } from './portal-settings'
+import { decryptSecret } from '@/lib/secret-crypto'
 
 // --- Types para a UI ---
 
@@ -72,6 +74,16 @@ interface FetchDetailsResponse {
 }
 
 // --- Helpers ---
+
+/**
+ * Resolve a senha UniFi local: a fornecida pela UI ou, se vazia (campo mascarado),
+ * a armazenada (criptografada) nos settings. Permite testar sem re-digitar.
+ */
+async function resolveUnifiPassword(provided: string): Promise<string> {
+  if (provided) return provided
+  const settings = await getPortalSettings()
+  return decryptSecret(settings.unifiPassword)
+}
 
 function buildUnifiConfig(url: string, username: string, password: string, site: string): ControllerConfig {
   return {
@@ -143,6 +155,7 @@ export async function testUnifiConnectionV2(
   password: string,
   site: string
 ): Promise<TestConnectionResponse> {
+  password = await resolveUnifiPassword(password)
   if (!url || !username || !password) {
     return {
       success: false,
@@ -218,6 +231,7 @@ export async function fetchUnifiSitesV2(
   username: string,
   password: string
 ): Promise<FetchSitesResponse> {
+  password = await resolveUnifiPassword(password)
   if (!url || !username || !password) {
     return {
       success: false,
@@ -266,6 +280,7 @@ export async function fetchUnifiDetailsV2(
   password: string,
   site: string
 ): Promise<FetchDetailsResponse> {
+  password = await resolveUnifiPassword(password)
   if (!url || !username || !password || !site) {
     return {
       success: false,
@@ -344,6 +359,7 @@ export async function authorizeTestMac(
   macAddress: string,
   sessionMinutes = 5
 ): Promise<AuthorizeTestMacResponse> {
+  password = await resolveUnifiPassword(password)
   if (!url || !username || !password) {
     return { success: false, message: 'Preencha URL, usuário e senha do controlador UniFi.' }
   }
@@ -387,6 +403,112 @@ export async function authorizeTestMac(
       success: false,
       message: getSpecificErrorMessage(error, 'UniFi'),
     }
+  }
+}
+
+// ============================================================================
+// UNIFI CLOUD (Site Manager API + Connector Proxy)
+// ============================================================================
+
+/**
+ * Resolve a API key a usar: a fornecida pela UI (recém-digitada) ou, se vazia,
+ * a armazenada (criptografada) nos settings. Permite testar sem re-digitar.
+ */
+async function resolveCloudApiKey(provided?: string): Promise<string> {
+  if (provided) return provided
+  const settings = await getPortalSettings()
+  return decryptSecret(settings.unifiApiKey)
+}
+
+interface CloudConsolesResponse {
+  success: boolean
+  consoles: Array<{ id: string; name: string; ip?: string; version?: string }>
+  error?: string
+}
+
+/**
+ * Testa a API key e lista os consoles da conta (GET /v1/hosts).
+ */
+export async function fetchUnifiCloudConsoles(apiKey?: string): Promise<CloudConsolesResponse> {
+  const key = await resolveCloudApiKey(apiKey)
+  if (!key) {
+    return { success: false, consoles: [], error: 'Informe a API key do UniFi (unifi.ui.com → Settings → API).' }
+  }
+
+  try {
+    const consoles = await UnifiCloudAdapter.listConsoles(key)
+    if (consoles.length === 0) {
+      return { success: false, consoles: [], error: 'Nenhum console UniFi OS encontrado nesta conta.' }
+    }
+    return { success: true, consoles }
+  } catch (error) {
+    return { success: false, consoles: [], error: getSpecificErrorMessage(error, 'UniFi Cloud') }
+  }
+}
+
+interface CloudSitesResponse {
+  success: boolean
+  sites: Array<{ id: string; name: string; description?: string }>
+  error?: string
+}
+
+/**
+ * Lista os sites de um console (via Connector Proxy).
+ */
+export async function fetchUnifiCloudSites(apiKey: string | undefined, consoleId: string): Promise<CloudSitesResponse> {
+  const key = await resolveCloudApiKey(apiKey)
+  if (!key || !consoleId) {
+    return { success: false, sites: [], error: 'Informe a API key e selecione um console primeiro.' }
+  }
+
+  try {
+    const sites = await UnifiCloudAdapter.listSitesForConsole(key, consoleId)
+    if (sites.length === 0) {
+      return { success: false, sites: [], error: 'Nenhum site encontrado neste console.' }
+    }
+    return { success: true, sites: sites.map((s) => ({ id: s.id, name: s.name, description: s.description })) }
+  } catch (error) {
+    return { success: false, sites: [], error: getSpecificErrorMessage(error, 'UniFi Cloud') }
+  }
+}
+
+/**
+ * Diagnóstico ponta-a-ponta: autoriza um MAC de teste via UniFi Cloud.
+ */
+export async function authorizeTestMacCloud(
+  apiKey: string | undefined,
+  consoleId: string,
+  siteId: string,
+  macAddress: string,
+  sessionMinutes = 5
+): Promise<AuthorizeTestMacResponse> {
+  const key = await resolveCloudApiKey(apiKey)
+  if (!key || !consoleId || !siteId) {
+    return { success: false, message: 'Informe API key, console e site.' }
+  }
+
+  const normalizedMac = macAddress.trim().toLowerCase().replace(/-/g, ':')
+  const macRegex = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/
+  if (!macRegex.test(normalizedMac)) {
+    return { success: false, message: 'MAC inválido. Use o formato aa:bb:cc:dd:ee:ff.' }
+  }
+
+  const config: ControllerConfig = {
+    type: 'unifi-cloud',
+    baseUrl: 'https://api.ui.com',
+    credentials: { apiKey: key, site: siteId },
+    options: { consoleId },
+  }
+
+  try {
+    const adapter = ControllerFactory.create('unifi-cloud')
+    const result = await adapter.authorizeGuest(config, { macAddress: normalizedMac, sessionMinutes })
+    if (!result.success) {
+      return { success: false, message: getSpecificErrorMessage(new Error(result.error || 'Falha na autorização'), 'UniFi Cloud') }
+    }
+    return { success: true, message: `MAC ${normalizedMac} autorizado por ${sessionMinutes} min via UniFi Cloud.` }
+  } catch (error) {
+    return { success: false, message: getSpecificErrorMessage(error, 'UniFi Cloud') }
   }
 }
 
