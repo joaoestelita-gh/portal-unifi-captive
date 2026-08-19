@@ -201,7 +201,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       const body = await response.text().catch(() => '')
       throw new ControllerConnectionError(
         'unifi-cloud',
-        `API request failed: ${response.status} ${endpoint}`,
+        `API request failed: ${response.status} ${endpoint}${body ? ` — ${body.slice(0, 200)}` : ''}`,
         { status: response.status, endpoint, body: body.slice(0, 300) }
       )
     }
@@ -285,7 +285,14 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       credentials: { apiKey },
       options: { consoleId },
     }
-    return adapter.getSites(config)
+    // Usa request() diretamente (que PROPAGA o erro) em vez de getSites(), que
+    // engole exceções e retornaria [] — mascarando 403 (não-owner)/offline no setup.
+    const sites = await adapter.request<IntegrationSite[]>(config, '/sites')
+    return (sites || []).map((s) => ({
+      id: s.id,
+      name: s.name || s.desc || s.id,
+      description: s.desc,
+    }))
   }
 
   // ==========================================================================

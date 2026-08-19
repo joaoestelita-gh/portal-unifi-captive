@@ -119,6 +119,14 @@ function getSpecificErrorMessage(error: unknown, controllerType: string): string
     return `Erro de certificado SSL. O controlador usa HTTPS com certificado auto-assinado — isso é normal e já é tratado automaticamente.`
   }
 
+  // UniFi Cloud — casos específicos do Connector Proxy (checar antes do 403/404 genérico)
+  if (isCloud && (message.includes('not the owner') || message.includes('owner of this host'))) {
+    return `Este console pertence a outra conta. A API Key precisa ser gerada pela conta PROPRIETÁRIA (owner) do console em unifi.ui.com → Settings → API — contas convidadas/admins não têm acesso ao Connector Proxy.`
+  }
+  if (isCloud && message.includes('device_offline')) {
+    return `O console selecionado está offline (ou é um registro duplicado). Selecione o console online correto e confirme que o UDM/console está conectado à internet.`
+  }
+
   // Erros de autenticação
   if (message.includes('401') || message.includes('Login failed')) {
     if (isCloud) {
