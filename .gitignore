@@ -16,3 +16,4 @@ public/db-dump.sql
 # TypeScript incremental build info
 *.tsbuildinfo
 tsconfig.tsbuildinfo
+.env
