@@ -1,13 +1,15 @@
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
-import { 
-  getDashboardStats, 
-  getWifiUsers, 
-  getActiveSessions, 
+import {
+  getDashboardStats,
+  getWifiUsers,
+  getActiveSessions,
   getVouchers,
   getPendingUsers,
-  getPortalSettings
+  getPortalSettingsForClient,
+  getPortalSettings,
+  getPreauthorizedMacs
 } from '@/app/actions/wifi'
 
 export default async function AdminPage() {
@@ -22,22 +24,25 @@ export default async function AdminPage() {
     redirect('/admin/login')
   }
 
-  const [stats, users, sessions, vouchers, pendingUsers, settings] = await Promise.all([
+  const [stats, users, sessions, vouchers, pendingUsers, settings, preauthMacs] = await Promise.all([
     getDashboardStats(),
     getWifiUsers(),
     getActiveSessions(),
     getVouchers(),
     getPendingUsers(),
+    getPortalSettingsForClient(),
     getPortalSettings(),
+    getPreauthorizedMacs(),
   ])
 
   return (
-    <AdminDashboard 
+    <AdminDashboard
       stats={stats}
       users={users}
       sessions={sessions}
       vouchers={vouchers}
       pendingUsers={pendingUsers}
+      preauthMacs={preauthMacs}
       settings={settings}
       adminName={session.user.name || 'Admin'}
     />

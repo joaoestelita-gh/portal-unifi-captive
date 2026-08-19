@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { safeEqual } from '@/lib/timing-safe'
 
 const SESSION_COOKIE_NAME = 'session_token'
 
@@ -60,7 +61,7 @@ export function middleware(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
 
     // Em dev sem CRON_SECRET, permite acesso (mantém compatibilidade)
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (cronSecret && !safeEqual(authHeader, `Bearer ${cronSecret}`)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

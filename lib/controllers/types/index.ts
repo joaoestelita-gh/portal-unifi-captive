@@ -7,7 +7,7 @@
 
 // --- Controller identification ---
 
-export type ControllerType = 'unifi' | 'aruba' | 'mikrotik' | 'omada'
+export type ControllerType = 'unifi' | 'unifi-cloud' | 'aruba' | 'mikrotik' | 'omada'
 
 export interface ControllerConfig {
   /** Tipo do controlador */

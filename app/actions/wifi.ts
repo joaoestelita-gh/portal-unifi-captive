@@ -16,6 +16,7 @@
 // Portal Settings
 export {
   getPortalSettings,
+  getPortalSettingsForClient,
   updatePortalSettings,
   updateControllerSettings,
   updateUnifiSettings,
@@ -58,6 +59,16 @@ export {
   getVouchers,
   deleteVoucher,
 } from './wifi-vouchers'
+
+// Pré-autorização de MACs
+export {
+  importPreauthorizedMacs,
+  addPreauthorizedMac,
+  getPreauthorizedMacs,
+  deletePreauthorizedMac,
+  linkPreauthorizedMacToUser,
+  unlinkPreauthorizedMac,
+} from './wifi-preauth'
 
 // WiFi Stats
 export {

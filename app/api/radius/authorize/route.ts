@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { validateRadiusToken } from '@/lib/radius'
+import { safeEqual } from '@/lib/timing-safe'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -60,7 +61,7 @@ async function handle(req: NextRequest) {
     req.headers.get('x-radius-secret') ||
     (typeof payload.secret === 'string' ? payload.secret : '')
 
-  if (providedSecret !== expectedSecret) {
+  if (!safeEqual(providedSecret, expectedSecret)) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 

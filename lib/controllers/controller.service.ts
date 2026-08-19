@@ -22,6 +22,7 @@
  */
 
 import { ControllerFactory } from './controller.factory'
+import { decryptSecret } from '../secret-crypto'
 import type { WifiControllerAdapter, ControllerCapability } from './wifi-controller.adapter'
 import type {
   ControllerType,
@@ -44,15 +45,19 @@ export interface PortalControllerSettings {
   controllerType: string | null
   unifiEnabled?: boolean | null
   arubaEnabled?: boolean | null
-  // UniFi
+  // UniFi (local — login por cookie)
   unifiControllerUrl?: string | null
   unifiUsername?: string | null
-  unifiPassword?: string | null
+  unifiPassword?: string | null // pode estar criptografado (ver lib/secret-crypto)
   unifiSite?: string | null
+  // UniFi Cloud (Site Manager API + Connector Proxy)
+  unifiApiKey?: string | null // pode estar criptografado (ver lib/secret-crypto)
+  unifiConsoleId?: string | null
+  unifiSiteId?: string | null
   // Aruba
   arubaControllerUrl?: string | null
   arubaClientId?: string | null
-  arubaClientSecret?: string | null
+  arubaClientSecret?: string | null // pode estar criptografado (ver lib/secret-crypto)
 }
 
 export class ControllerService {
@@ -317,8 +322,28 @@ export class ControllerService {
           baseUrl: settings.unifiControllerUrl,
           credentials: {
             username: settings.unifiUsername,
-            password: settings.unifiPassword,
+            // Segredo descriptografado apenas aqui, no servidor, na hora do uso.
+            password: decryptSecret(settings.unifiPassword),
             site: settings.unifiSite || 'default',
+          },
+        }
+      }
+
+      case 'unifi-cloud': {
+        // Cloud usa API key + console (hostId) do Site Manager; o site é o siteId
+        // da Integration API. A baseUrl fica implícita no adapter (api.ui.com).
+        if (!settings.unifiApiKey || !settings.unifiConsoleId || !settings.unifiSiteId) {
+          return null
+        }
+        return {
+          type: 'unifi-cloud',
+          baseUrl: 'https://api.ui.com',
+          credentials: {
+            apiKey: decryptSecret(settings.unifiApiKey),
+            site: settings.unifiSiteId,
+          },
+          options: {
+            consoleId: settings.unifiConsoleId,
           },
         }
       }
@@ -332,7 +357,9 @@ export class ControllerService {
           baseUrl: settings.arubaControllerUrl,
           credentials: {
             clientId: settings.arubaClientId || undefined,
-            clientSecret: settings.arubaClientSecret || undefined,
+            clientSecret: settings.arubaClientSecret
+              ? decryptSecret(settings.arubaClientSecret)
+              : undefined,
           },
         }
       }

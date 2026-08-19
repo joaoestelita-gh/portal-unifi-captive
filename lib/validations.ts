@@ -72,25 +72,63 @@ export const updatePortalSettingsSchema = z.object({
   backgroundColor: z.string().max(20).optional().nullable(),
   primaryColor: z.string().max(20).optional().nullable(),
   secondaryColor: z.string().max(20).optional().nullable(),
+  colorScheme: z.string().max(40).optional().nullable(),
   termsText: z.string().max(5000).optional().nullable(),
-  successRedirectUrl: z.string().url('URL de redirecionamento inválida').max(500).optional().nullable(),
-  defaultSessionMinutes: z.number().int().min(1).max(1440).optional().nullable(),
-  defaultDailyMinutes: z.number().int().min(1).max(1440).optional().nullable(),
+  // Aceita vazio (fallback padrão aplicado depois) e não força formato absoluto.
+  successRedirectUrl: z.string().max(500).optional().nullable(),
+  // 0 = ilimitado (sem sessão limitada); por isso min(0), não min(1).
+  defaultSessionMinutes: z.number().int().min(0).max(1440).optional().nullable(),
+  defaultDailyMinutes: z.number().int().min(0).max(1440).optional().nullable(),
   defaultSpeedDown: z.number().int().min(0).optional().nullable(),
   defaultSpeedUp: z.number().int().min(0).optional().nullable(),
   requireApproval: z.boolean().optional().nullable(),
 })
 
+// --- MAC address helpers ---
+
+/**
+ * Normaliza um MAC address para o formato canônico `aa:bb:cc:dd:ee:ff`
+ * (minúsculo, separado por `:`). Remove separadores comuns (`:`, `-`, `.`,
+ * espaços) antes de validar. Retorna `null` se não forem exatamente 12
+ * dígitos hexadecimais.
+ *
+ * O UniFi já envia o MAC em minúsculas; normalizar dos dois lados garante o
+ * casamento MAC↔lista independente de caixa/separador de origem.
+ */
+export function normalizeMac(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const hex = raw.replace(/[^0-9a-fA-F]/g, '').toLowerCase()
+  if (hex.length !== 12) return null
+  return hex.match(/.{2}/g)!.join(':')
+}
+
+// --- Pre-authorized MAC validations ---
+
+export const preauthMacSchema = z.object({
+  mac: z.string().min(1, 'MAC é obrigatório').max(50),
+  label: z.string().max(200).optional().nullable(),
+})
+
+export const preauthImportSchema = z.object({
+  rawText: z.string().min(1, 'Cole ao menos um MAC').max(200000),
+})
+
 // --- Controller Settings ---
 
 export const updateControllerSettingsSchema = z.object({
-  controllerType: z.enum(['none', 'unifi', 'aruba', 'both']),
+  controllerType: z.enum(['none', 'unifi', 'unifi-cloud', 'aruba', 'both']),
   unifiEnabled: z.boolean().optional(),
   arubaEnabled: z.boolean().optional(),
+  // UniFi local (login por cookie)
   unifiControllerUrl: z.string().max(500).default(''),
   unifiUsername: z.string().max(100).default(''),
   unifiPassword: z.string().max(200).default(''),
   unifiSite: z.string().max(100).default('default'),
+  // UniFi Cloud (Site Manager API + Connector Proxy)
+  unifiApiKey: z.string().max(400).default(''),
+  unifiConsoleId: z.string().max(200).default(''),
+  unifiSiteId: z.string().max(200).default(''),
+  // Aruba Instant On
   arubaControllerUrl: z.string().max(500).default(''),
   arubaClientId: z.string().max(200).default(''),
   arubaClientSecret: z.string().max(200).default(''),

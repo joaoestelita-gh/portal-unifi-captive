@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus, ExternalLink, ChevronDown, Activity, ShieldCheck, KeyRound } from 'lucide-react'
 import { updateControllerSettings } from '@/app/actions/wifi'
-import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2, authorizeTestMac } from '@/app/actions/controller'
+import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2, authorizeTestMac, fetchUnifiCloudConsoles, fetchUnifiCloudSites, authorizeTestMacCloud } from '@/app/actions/controller'
 import { toast } from 'sonner'
 
 interface PortalLog {
@@ -27,9 +27,17 @@ interface ControllerSettings {
   unifiUsername?: string | null
   unifiPassword?: string | null
   unifiSite?: string | null
+  // UniFi Cloud
+  unifiApiKey?: string | null
+  unifiConsoleId?: string | null
+  unifiSiteId?: string | null
   arubaControllerUrl?: string | null
   arubaClientId?: string | null
   arubaClientSecret?: string | null
+  // Flags de presença de segredos (do getPortalSettingsForClient)
+  hasUnifiPassword?: boolean
+  hasUnifiApiKey?: boolean
+  hasArubaClientSecret?: boolean
 }
 
 interface ControllerSetupProps {
@@ -37,7 +45,7 @@ interface ControllerSetupProps {
   settings: ControllerSettings
 }
 
-type ControllerTypeValue = 'none' | 'unifi' | 'aruba' | 'both'
+type ControllerTypeValue = 'none' | 'unifi' | 'unifi-cloud' | 'aruba' | 'both'
 type IntegrationState = 'ok' | 'error' | 'idle'
 
 const CONTROLLER_OPTIONS: {
@@ -47,7 +55,8 @@ const CONTROLLER_OPTIONS: {
   icon: typeof Server
 }[] = [
   { value: 'none', title: 'Portal Independente', description: 'Sem integração com controladora', icon: Globe },
-  { value: 'unifi', title: 'UniFi', description: 'Cloud Gateway / Dream Machine', icon: Router },
+  { value: 'unifi', title: 'UniFi (Local)', description: 'Login direto no console (rede local/VPN)', icon: Router },
+  { value: 'unifi-cloud', title: 'UniFi Cloud', description: 'API oficial (api.ui.com) — sem túnel', icon: Globe },
   { value: 'aruba', title: 'Aruba Instant On', description: 'HP Networking', icon: Wifi },
   { value: 'both', title: 'UniFi + Aruba', description: 'Ambas as controladoras', icon: Server },
 ]
@@ -238,6 +247,16 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [testMac, setTestMac] = useState('')
   const [authorizingMac, setAuthorizingMac] = useState(false)
 
+  // UniFi Cloud states (Site Manager API + Connector Proxy)
+  const [unifiApiKey, setUnifiApiKey] = useState('') // sempre vazio; segredo mascarado no servidor
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [unifiConsoleId, setUnifiConsoleId] = useState(settings.unifiConsoleId || '')
+  const [unifiSiteId, setUnifiSiteId] = useState(settings.unifiSiteId || '')
+  const [cloudConsoles, setCloudConsoles] = useState<Array<{ id: string; name: string; ip?: string; version?: string }>>([])
+  const [cloudSites, setCloudSites] = useState<Array<{ id: string; name: string; description?: string }>>([])
+  const [loadingConsoles, setLoadingConsoles] = useState(false)
+  const [loadingCloudSites, setLoadingCloudSites] = useState(false)
+
   // HP Aruba Instant On states
   const [arubaUrl, setArubaUrl] = useState(settings.arubaControllerUrl || '')
   const [arubaClientId, setArubaClientId] = useState(settings.arubaClientId || '')
@@ -305,11 +324,14 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
         arubaEnabled: controllerType === 'aruba' || controllerType === 'both',
         unifiControllerUrl: unifiUrl,
         unifiUsername,
-        unifiPassword,
+        unifiPassword, // vazio = preserva o existente (servidor)
         unifiSite,
+        unifiApiKey, // vazio = preserva o existente (servidor)
+        unifiConsoleId,
+        unifiSiteId,
         arubaControllerUrl: arubaUrl,
         arubaClientId,
-        arubaClientSecret,
+        arubaClientSecret, // vazio = preserva o existente (servidor)
       })
       if (!silent) toast.success('Configurações salvas', { description: 'As configurações da controladora foram salvas com sucesso.' })
       return true
@@ -412,6 +434,72 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
     setAuthorizingMac(false)
   }
 
+  // --- UniFi Cloud handlers ---
+
+  const handleFetchConsoles = async () => {
+    setLoadingConsoles(true)
+    try {
+      // Persiste a API key antes (para o fallback no servidor e para o teste E2E)
+      await handleSave(true)
+      const result = await fetchUnifiCloudConsoles(unifiApiKey || undefined)
+      if (result.success && result.consoles.length > 0) {
+        setCloudConsoles(result.consoles)
+        setConnectionStatus('ok')
+        toast.success('Consoles encontrados', { description: `${result.consoles.length} console(s) na conta.` })
+        if (!unifiConsoleId) setUnifiConsoleId(result.consoles[0].id)
+      } else {
+        setConnectionStatus('error')
+        showError(result.error || 'Nenhum console encontrado')
+      }
+    } catch (error) {
+      setConnectionStatus('error')
+      showError(error instanceof Error ? error.message : 'Falha ao buscar consoles.')
+    }
+    setLoadingConsoles(false)
+  }
+
+  const handleFetchCloudSites = async () => {
+    if (!unifiConsoleId) {
+      showError('Selecione um console primeiro.')
+      return
+    }
+    setLoadingCloudSites(true)
+    try {
+      await handleSave(true)
+      const result = await fetchUnifiCloudSites(unifiApiKey || undefined, unifiConsoleId)
+      if (result.success && result.sites.length > 0) {
+        setCloudSites(result.sites)
+        toast.success('Sites sincronizados', { description: `${result.sites.length} site(s) encontrado(s).` })
+        if (!unifiSiteId) setUnifiSiteId(result.sites[0].id)
+      } else {
+        showError(result.error || 'Nenhum site encontrado')
+      }
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Falha ao buscar sites.')
+    }
+    setLoadingCloudSites(false)
+  }
+
+  const handleAuthorizeTestMacCloud = async () => {
+    if (!unifiConsoleId || !unifiSiteId) {
+      showError('Selecione console e site antes de autorizar um MAC de teste.')
+      return
+    }
+    setAuthorizingMac(true)
+    try {
+      await handleSave(true)
+      const result = await authorizeTestMacCloud(unifiApiKey || undefined, unifiConsoleId, unifiSiteId, testMac, 5)
+      if (result.success) {
+        toast.success('MAC autorizado', { description: result.message })
+      } else {
+        showError(result.message)
+      }
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Falha ao autorizar o MAC de teste.')
+    }
+    setAuthorizingMac(false)
+  }
+
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400)
     const hours = Math.floor((seconds % 86400) / 3600)
@@ -424,6 +512,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const fullPortalUrl = `${portalUrl}/portal`
   const showUnifi = controllerType === 'unifi' || controllerType === 'both'
   const showAruba = controllerType === 'aruba' || controllerType === 'both'
+  const showUnifiCloud = controllerType === 'unifi-cloud'
 
   // Portal-logs card, compartilhado por ambas as controladoras (Seção 5)
   const logsCard = (
@@ -608,6 +697,114 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
             </p>
           </CardContent>
         </Card>
+      ) : showUnifiCloud ? (
+        /* ============================================================= */
+        /* UNIFI CLOUD — Site Manager API + Connector Proxy              */
+        /* ============================================================= */
+        <>
+          <SectionCard index={1} icon={Globe} title="UniFi Cloud (API oficial)"
+            description="Integração via api.ui.com — o portal libera clientes sem túnel/VPN para a rede local. Requer console UniFi OS com firmware recente e uma API key gerada em unifi.ui.com → Settings → API.">
+            <div className="space-y-4">
+              {/* API key */}
+              <div className="space-y-2">
+                <Label htmlFor="unifi-api-key" className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4" /> API Key
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="unifi-api-key"
+                    type={showApiKey ? 'text' : 'password'}
+                    value={unifiApiKey}
+                    onChange={(e) => setUnifiApiKey(e.target.value)}
+                    placeholder={settings.hasUnifiApiKey ? '•••••••• (chave salva — deixe em branco para manter)' : 'Cole a API key do UniFi'}
+                    className="pr-10"
+                  />
+                  <button type="button" onClick={() => setShowApiKey((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A chave é criptografada em repouso e nunca retorna ao navegador.
+                </p>
+              </div>
+
+              {/* Console */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Server className="w-4 h-4" /> Console</Label>
+                <div className="flex gap-2">
+                  <select
+                    value={unifiConsoleId}
+                    onChange={(e) => setUnifiConsoleId(e.target.value)}
+                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">{cloudConsoles.length ? 'Selecione um console' : (unifiConsoleId || 'Busque os consoles')}</option>
+                    {cloudConsoles.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}{c.ip ? ` (${c.ip})` : ''}</option>
+                    ))}
+                    {unifiConsoleId && !cloudConsoles.some((c) => c.id === unifiConsoleId) && (
+                      <option value={unifiConsoleId}>{unifiConsoleId} (salvo)</option>
+                    )}
+                  </select>
+                  <Button variant="outline" onClick={handleFetchConsoles} disabled={loadingConsoles}>
+                    {loadingConsoles ? <Loader2 className="w-4 h-4 animate-spin sm:mr-2" /> : <RefreshCw className="w-4 h-4 sm:mr-2" />}
+                    <span className="hidden sm:inline">Buscar consoles</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Site */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Wifi className="w-4 h-4" /> Site</Label>
+                <div className="flex gap-2">
+                  <select
+                    value={unifiSiteId}
+                    onChange={(e) => setUnifiSiteId(e.target.value)}
+                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">{cloudSites.length ? 'Selecione um site' : (unifiSiteId || 'Busque os sites')}</option>
+                    {cloudSites.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                    {unifiSiteId && !cloudSites.some((s) => s.id === unifiSiteId) && (
+                      <option value={unifiSiteId}>{unifiSiteId} (salvo)</option>
+                    )}
+                  </select>
+                  <Button variant="outline" onClick={handleFetchCloudSites} disabled={loadingCloudSites || !unifiConsoleId}>
+                    {loadingCloudSites ? <Loader2 className="w-4 h-4 animate-spin sm:mr-2" /> : <RefreshCw className="w-4 h-4 sm:mr-2" />}
+                    <span className="hidden sm:inline">Buscar sites</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={() => handleSave()} disabled={saving} className="bg-primary hover:bg-primary/90">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                  Salvar configuração
+                </Button>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Diagnóstico: autorizar MAC de teste (ponta-a-ponta) */}
+          <SectionCard index={2} icon={ShieldCheck} title="Diagnóstico" accent="text-emerald-400"
+            description="Autoriza um MAC real por 5 min via Connector Proxy — valida credenciais de escrita de ponta a ponta.">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={testMac}
+                onChange={(e) => setTestMac(e.target.value)}
+                placeholder="aa:bb:cc:dd:ee:ff"
+                className="flex-1"
+              />
+              <Button onClick={handleAuthorizeTestMacCloud} disabled={authorizingMac || !testMac.trim() || !unifiConsoleId || !unifiSiteId}>
+                {authorizingMac ? <Loader2 className="w-4 h-4 animate-spin sm:mr-2" /> : <ShieldCheck className="w-4 h-4 sm:mr-2" />}
+                <span className="hidden sm:inline">Autorizar MAC de teste</span>
+              </Button>
+            </div>
+          </SectionCard>
+
+          {logsCard}
+        </>
       ) : (
         <>
           {/* ============================================================= */}

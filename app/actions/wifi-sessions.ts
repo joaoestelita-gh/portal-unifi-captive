@@ -15,6 +15,7 @@ import { revalidatePath } from 'next/cache'
 import { verifyPassword } from '@/lib/crypto'
 import { loginWifiUserSchema, loginVoucherSchema } from '@/lib/validations'
 import { createRadiusToken } from '@/lib/radius'
+import { findPreauthorizedByMac, markPreauthLinked } from '@/lib/preauth'
 import { ControllerService } from '@/lib/controllers'
 import { DEFAULT_SPEED_UP_KBPS, DEFAULT_SPEED_DOWN_KBPS, DEFAULT_SESSION_MINUTES, DEFAULT_DAILY_MINUTES, DEFAULT_SUCCESS_REDIRECT_URL } from '@/lib/constants'
 import { getPortalSettings } from './portal-settings'
@@ -254,6 +255,20 @@ export async function loginWifiUser(
   const validPassword = await verifyPassword(password, user.password)
   if (!validPassword) {
     return { success: false, error: 'Senha incorreta' }
+  }
+
+  // MAC pré-autorizado → promove usuário pendente para aprovado automaticamente.
+  // Cobre quem se cadastrou ANTES do MAC entrar na lista.
+  if (user.status === 'pending') {
+    const preauth = await findPreauthorizedByMac(macAddress)
+    if (preauth) {
+      await db.update(wifiUsers).set({
+        status: 'approved',
+        updatedAt: new Date(),
+      }).where(eq(wifiUsers.id, user.id))
+      user.status = 'approved'
+      await markPreauthLinked(preauth, user.id)
+    }
   }
 
   if (user.status === 'pending') {

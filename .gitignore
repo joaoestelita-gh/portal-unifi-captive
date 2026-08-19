@@ -8,6 +8,11 @@ node_modules
 .next/
 .env*.local
 .DS_Store
+
+# Dumps de banco — NUNCA versionar (contêm segredos e PII)
+backups/
+db-dump.sql
+public/db-dump.sql
 # TypeScript incremental build info
 *.tsbuildinfo
 tsconfig.tsbuildinfo
