@@ -725,7 +725,8 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  A chave é criptografada em repouso e nunca retorna ao navegador.
+                  Gere em <strong className="text-foreground">unifi.ui.com → Settings → API</strong> (nível da conta,
+                  não dentro de um site específico) e cole a chave completa. Ela é criptografada em repouso e nunca retorna ao navegador.
                 </p>
               </div>
 
