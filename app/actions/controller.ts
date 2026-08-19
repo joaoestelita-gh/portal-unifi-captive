@@ -99,6 +99,8 @@ function buildUnifiConfig(url: string, username: string, password: string, site:
 
 function getSpecificErrorMessage(error: unknown, controllerType: string): string {
   const message = error instanceof Error ? error.message : String(error)
+  // UniFi Cloud autentica por API Key (X-API-KEY), não por usuário/senha.
+  const isCloud = controllerType.includes('Cloud')
 
   // Erros de rede / DNS
   if (message.includes('ENOTFOUND') || message.includes('getaddrinfo')) {
@@ -119,14 +121,23 @@ function getSpecificErrorMessage(error: unknown, controllerType: string): string
 
   // Erros de autenticação
   if (message.includes('401') || message.includes('Login failed')) {
+    if (isCloud) {
+      return `API Key inválida ou expirada. Gere uma nova em unifi.ui.com → Settings → API e cole no painel.`
+    }
     return `Credenciais inválidas. Verifique o usuário e senha do ${controllerType}. Certifique-se de que o usuário tem permissão de administrador.`
   }
   if (message.includes('403')) {
+    if (isCloud) {
+      return `Acesso negado. A API Key não tem permissão para este recurso. Verifique se ela foi gerada com acesso de administrador em unifi.ui.com → Settings → API.`
+    }
     return `Acesso negado. O usuário não tem permissão suficiente no ${controllerType}. Use uma conta com perfil Admin.`
   }
 
   // Erros de endpoint
   if (message.includes('404')) {
+    if (isCloud) {
+      return `Recurso não encontrado no UniFi Cloud. Verifique se o console e o site selecionados ainda existem na sua conta.`
+    }
     return `Endpoint não encontrado. A URL do ${controllerType} pode estar incorreta. Tente usar o formato: https://IP-DO-CONTROLLER`
   }
   if (message.includes('502') || message.includes('503')) {
