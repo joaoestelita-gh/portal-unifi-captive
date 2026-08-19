@@ -18,7 +18,7 @@ echo ""
 # --- Variáveis ---
 read -p "Nome do cliente (ex: prefeitura, colegio): " CLIENT_NAME
 read -p "Domínio (ex: portal-prefeitura.centernet.inf.br): " DOMAIN
-read -p "DATABASE_URL (Neon): " DATABASE_URL
+read -p "DATABASE_URL (PostgreSQL): " DATABASE_URL
 read -p "BETTER_AUTH_SECRET (gere com: openssl rand -base64 32): " AUTH_SECRET
 read -p "CRON_SECRET (qualquer string segura): " CRON_SECRET
 
@@ -37,7 +37,7 @@ cat > .env << EOF
 # Portal CenterNet — $CLIENT_NAME
 # Gerado em: $(date)
 
-# Banco de dados (Neon PostgreSQL)
+# Banco de dados (PostgreSQL)
 DATABASE_URL="$DATABASE_URL"
 
 # Autenticação
@@ -91,13 +91,16 @@ echo "3. Verificar se está rodando:"
 echo "   docker logs centernet-$CLIENT_NAME"
 echo "   curl http://localhost:3000"
 echo ""
-echo "4. Criar admin inicial:"
+echo "4. Criar o schema no banco (uma vez, a partir do repo):"
+echo "   cd /opt/centernet/repo && DATABASE_URL=\"$DATABASE_URL\" npm run db:push"
+echo ""
+echo "5. Criar admin inicial:"
 echo "   curl http://localhost:3000/api/setup"
 echo ""
-echo "5. Configurar Cloudflare:"
+echo "6. Configurar Cloudflare:"
 echo "   DNS A: $DOMAIN → IP deste servidor"
 echo ""
-echo "6. Configurar Cloud Gateway do cliente:"
+echo "7. Configurar Cloud Gateway do cliente:"
 echo "   Custom Portal URL: https://$DOMAIN/portal"
 echo ""
 echo "====================================="

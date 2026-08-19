@@ -9,7 +9,30 @@ if (!connectionString) {
   process.exit(1)
 }
 
-const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } })
+// SSL neutro a fornecedor (mesma lógica de lib/db/ssl.ts, replicada porque
+// este arquivo é .mjs puro e não importa TypeScript).
+function resolveSsl() {
+  const mode = (process.env.DATABASE_SSL || '').trim().toLowerCase()
+  switch (mode) {
+    case 'false':
+    case 'disable':
+    case '0':
+    case 'off':
+      return false
+    case 'require':
+    case 'no-verify':
+      return { rejectUnauthorized: false }
+    case 'true':
+    case 'verify':
+      return { rejectUnauthorized: true }
+  }
+  if (/sslmode=(require|verify)/i.test(connectionString)) {
+    return { rejectUnauthorized: false }
+  }
+  return false
+}
+
+const client = new Client({ connectionString, ssl: resolveSsl() })
 
 // Escapa um valor para uso literal em SQL
 function quoteLiteral(value) {
@@ -42,7 +65,7 @@ async function main() {
   lines.push('SET standard_conforming_strings = on;')
   lines.push('')
 
-  // Tabelas do schema public (exclui as gerenciadas pelo Neon Auth, se houver)
+  // Tabelas do schema public
   const { rows: tables } = await client.query(`
     SELECT table_name
     FROM information_schema.tables

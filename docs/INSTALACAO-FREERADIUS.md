@@ -33,7 +33,7 @@ RADIUS, eliminando o erro `404 captive portal not find ecp config`.
 ```
 1. Convidado conecta na rede Guest e é redirecionado para o portal (este app).
 2. Convidado faz login (e-mail/senha) ou informa um voucher.
-3. O app valida no banco (Neon) e gera um TOKEN de uso único.
+3. O app valida no banco (PostgreSQL) e gera um TOKEN de uso único.
 4. O navegador é enviado ao AP:  /cgi-bin/login?user=TOKEN&password=TOKEN
 5. O AP envia user/password (o TOKEN) ao FreeRADIUS via UDP 1812.
 6. O FreeRADIUS chama o endpoint REST do app:  /api/radius/authorize
