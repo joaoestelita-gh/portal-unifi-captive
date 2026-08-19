@@ -8,7 +8,6 @@ import {
   getVouchers,
   getPendingUsers,
   getPortalSettingsForClient,
-  getPortalSettings,
   getPreauthorizedMacs
 } from '@/app/actions/wifi'
 
@@ -31,7 +30,6 @@ export default async function AdminPage() {
     getVouchers(),
     getPendingUsers(),
     getPortalSettingsForClient(),
-    getPortalSettings(),
     getPreauthorizedMacs(),
   ])
 

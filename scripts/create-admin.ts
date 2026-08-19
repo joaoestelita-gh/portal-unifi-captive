@@ -56,14 +56,6 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 
-// Imports que dependem de DATABASE_URL devem vir DEPOIS do load acima.
-// (imports estáticos são içados, então usamos import dinâmico)
-const { db } = await import('../lib/db')
-const { users } = await import('../lib/db/schema')
-const { eq } = await import('drizzle-orm')
-const bcrypt = (await import('bcryptjs')).default
-const { nanoid } = await import('nanoid')
-
 // --- 2. Parsing de argumentos ----------------------------------------------
 function parseArgs(argv: string[]) {
   const out: Record<string, string | boolean> = {}
@@ -120,6 +112,14 @@ function isValidEmail(email: string): boolean {
 }
 
 async function main() {
+  // Imports que dependem de DATABASE_URL devem vir DEPOIS do load acima.
+  // (imports estáticos são içados, então usamos import dinâmico dentro de main)
+  const { db } = await import('../lib/db')
+  const { users } = await import('../lib/db/schema')
+  const { eq } = await import('drizzle-orm')
+  const bcrypt = (await import('bcryptjs')).default
+  const { nanoid } = await import('nanoid')
+
   // e-mail
   let email = (args.email as string) || process.env.ADMIN_EMAIL || ''
   if (!email) email = await prompt('E-mail do admin')
