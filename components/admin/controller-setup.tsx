@@ -1090,6 +1090,14 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
                         </div>
                       </div>
                     </div>
+                    <div className="pt-1">
+                      <Button asChild variant="outline" size="sm" className="gap-2">
+                        <a href="/docs/unifi" target="_blank" rel="noopener noreferrer">
+                          Mais detalhes
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    </div>
                   </div>
                 </CollapsibleSection>
               </div>

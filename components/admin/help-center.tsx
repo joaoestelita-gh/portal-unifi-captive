@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Wifi, Router, Ticket, Users, LayoutGrid, BookOpen, Layers, Palette } from 'lucide-react'
+import { ArrowLeft, Wifi, Router, Ticket, Users, LayoutGrid, BookOpen, Layers, Palette, FileText, ExternalLink } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { COLOR_SCHEMES } from '@/lib/color-schemes'
 
 type SectionId = 'overview' | 'aruba' | 'unifi' | 'both' | 'vouchers' | 'users' | 'customization'
@@ -353,6 +354,21 @@ function UnifiSection() {
   return (
     <div className="flex flex-col gap-6">
       <SectionHeader icon={Router} title="Configuração UniFi" subtitle="Ubiquiti Cloud Key, UDM, UDR" />
+
+      <Link
+        href="/docs/unifi"
+        target="_blank"
+        className="group flex items-center gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <FileText className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-foreground">Guia completo em versão imprimível</p>
+          <p className="text-sm text-muted-foreground">Abra a documentação da integração UniFi para ler ou salvar em PDF.</p>
+        </div>
+        <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+      </Link>
 
       <Card>
         <CardHeader><CardTitle className="text-lg">Visão Geral</CardTitle></CardHeader>
