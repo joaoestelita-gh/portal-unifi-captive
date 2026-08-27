@@ -9,7 +9,8 @@
 
 import { db } from '@/lib/db'
 import { wifiUsers, wifiSessions, wifiVouchers, wifiUserDevices } from '@/lib/db/schema'
-import { eq, desc, sql, and } from 'drizzle-orm'
+import { eq, desc, sql, and, inArray } from 'drizzle-orm'
+import { requireAdmin } from '@/lib/auth'
 import { nanoid } from 'nanoid'
 import { revalidatePath } from 'next/cache'
 import { verifyPassword } from '@/lib/crypto'
@@ -485,21 +486,26 @@ export async function loginWithVoucher(
 
 /** Lista sessões ativas com dados do usuário. */
 export async function getActiveSessions() {
-  const sessions = await db
-    .select({
-      session: wifiSessions,
-      user: wifiUsers,
-    })
-    .from(wifiSessions)
-    .leftJoin(wifiUsers, eq(wifiSessions.wifiUserId, wifiUsers.id))
-    .where(eq(wifiSessions.status, 'active'))
-    .orderBy(desc(wifiSessions.startTime))
+  try {
+    const sessions = await db
+      .select({
+        session: wifiSessions,
+        user: wifiUsers,
+      })
+      .from(wifiSessions)
+      .leftJoin(wifiUsers, eq(wifiSessions.wifiUserId, wifiUsers.id))
+      .where(eq(wifiSessions.status, 'active'))
+      .orderBy(desc(wifiSessions.startTime))
 
-  return sessions.map(s => ({
-    ...s.session,
-    userName: s.user?.name || 'Visitante',
-    userEmail: s.user?.email || '',
-  }))
+    return sessions.map(s => ({
+      ...s.session,
+      userName: s.user?.name || 'Visitante',
+      userEmail: s.user?.email || '',
+    }))
+  } catch (error) {
+    console.error('[v0] getActiveSessions falhou, retornando lista vazia:', error)
+    return []
+  }
 }
 
 /** Encerra uma sessão manualmente e desautoriza na controladora. */
@@ -532,4 +538,21 @@ export async function endSession(sessionId: string) {
   }
 
   revalidatePath('/admin')
+}
+
+/**
+ * Limpa o histórico de conexões já finalizadas (status 'ended' ou 'expired').
+ * Preserva as sessões ativas — usuários conectados no momento não são afetados.
+ * Retorna a quantidade de registros removidos.
+ */
+export async function clearEndedSessions() {
+  await requireAdmin()
+
+  const deleted = await db
+    .delete(wifiSessions)
+    .where(inArray(wifiSessions.status, ['ended', 'expired']))
+    .returning({ id: wifiSessions.id })
+
+  revalidatePath('/admin')
+  return { deleted: deleted.length }
 }

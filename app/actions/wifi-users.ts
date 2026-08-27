@@ -147,14 +147,24 @@ export async function registerWifiUser(data: {
 
 /** Lista todos os usuários WiFi. */
 export async function getWifiUsers() {
-  return db.select().from(wifiUsers).orderBy(desc(wifiUsers.createdAt))
+  try {
+    return await db.select().from(wifiUsers).orderBy(desc(wifiUsers.createdAt))
+  } catch (error) {
+    console.error('[v0] getWifiUsers falhou, retornando lista vazia:', error)
+    return []
+  }
 }
 
 /** Lista usuários pendentes de aprovação. */
 export async function getPendingUsers() {
-  return db.select().from(wifiUsers)
-    .where(eq(wifiUsers.status, 'pending'))
-    .orderBy(desc(wifiUsers.createdAt))
+  try {
+    return await db.select().from(wifiUsers)
+      .where(eq(wifiUsers.status, 'pending'))
+      .orderBy(desc(wifiUsers.createdAt))
+  } catch (error) {
+    console.error('[v0] getPendingUsers falhou, retornando lista vazia:', error)
+    return []
+  }
 }
 
 /** Aprova um usuário pendente. */

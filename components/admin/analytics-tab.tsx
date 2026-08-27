@@ -14,7 +14,18 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { Bar, BarChart, Area, AreaChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts'
-import { Activity, Wifi, Users, Clock, Router, TrendingUp, RefreshCw, Loader2, Filter, AlertCircle, BarChart3, Inbox } from 'lucide-react'
+import { Activity, Wifi, Users, Clock, Router, TrendingUp, RefreshCw, Loader2, Filter, AlertCircle, BarChart3, Inbox, Trash2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
@@ -35,6 +46,7 @@ import {
   type ConnectionsByDay,
   type RecentConnection,
 } from '@/app/actions/analytics'
+import { clearEndedSessions } from '@/app/actions/wifi-sessions'
 
 export function AnalyticsTab() {
   const [loading, setLoading] = useState(true)
@@ -51,6 +63,7 @@ export function AnalyticsTab() {
   const [byHour, setByHour] = useState<ConnectionsByHour[]>([])
   const [byDay, setByDay] = useState<ConnectionsByDay[]>([])
   const [recent, setRecent] = useState<RecentConnection[]>([])
+  const [clearing, setClearing] = useState(false)
   const [uniqueAPs, setUniqueAPs] = useState<string[]>([])
   const [uniqueSSIDs, setUniqueSSIDs] = useState<string[]>([])
 
@@ -89,6 +102,24 @@ export function AnalyticsTab() {
 
   useEffect(() => {
     loadData()
+  }, [loadData])
+
+  const handleClearEnded = useCallback(async () => {
+    setClearing(true)
+    try {
+      const { deleted } = await clearEndedSessions()
+      toast.success('Histórico limpo', {
+        description: deleted > 0
+          ? `${deleted} ${deleted === 1 ? 'conexão encerrada foi removida' : 'conexões encerradas foram removidas'}.`
+          : 'Não havia conexões encerradas para remover.',
+      })
+      await loadData()
+    } catch (err) {
+      console.error('Error clearing ended sessions:', err)
+      toast.error('Erro ao limpar histórico', { description: 'Não foi possível remover as conexões. Tente novamente.' })
+    } finally {
+      setClearing(false)
+    }
   }, [loadData])
 
   const peakHour = byHour.reduce((max, h) => h.connections > max.connections ? h : max, { hour: 0, connections: 0 })
@@ -551,11 +582,42 @@ export function AnalyticsTab() {
       {/* Últimas conexões */}
       <Card className="bg-card/50 border-border/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Activity className="w-4 h-4 text-primary" />
-            Últimas Conexões
-          </CardTitle>
-          <CardDescription>Histórico recente de conexões ao portal</CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Activity className="w-4 h-4 text-primary" />
+                Últimas Conexões
+              </CardTitle>
+              <CardDescription>Histórico recente de conexões ao portal</CardDescription>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 shrink-0"
+                  disabled={clearing || !recent.some(c => c.status !== 'active')}
+                >
+                  {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Limpar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Limpar histórico de conexões?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Isso remove permanentemente todas as conexões já encerradas ou expiradas.
+                    As sessões ativas são preservadas — nenhum usuário conectado será desconectado.
+                    Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearEnded}>Limpar histórico</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-xl border border-border/50 overflow-hidden max-h-[300px] overflow-y-auto">
