@@ -335,8 +335,13 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
       })
       if (!silent) toast.success('Configurações salvas', { description: 'As configurações da controladora foram salvas com sucesso.' })
       return true
-    } catch {
-      showError('Erro ao salvar configurações')
+    } catch (error) {
+      // Exibe a mensagem real do servidor em vez de um erro genérico,
+      // para que problemas de configuração (ex.: chave de criptografia ausente)
+      // fiquem visíveis em vez de mascarados.
+      const message = error instanceof Error && error.message ? error.message : 'Erro ao salvar configurações'
+      console.error('[v0] Erro ao salvar config da controladora:', error)
+      showError(message)
       return false
     } finally {
       setSaving(false)
