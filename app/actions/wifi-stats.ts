@@ -14,17 +14,23 @@ import { eq, sql } from 'drizzle-orm'
  * Retorna estatísticas resumidas para o dashboard admin.
  */
 export async function getDashboardStats() {
-  const [totalUsers, pendingUsers, activeSessions, activeVouchers] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(wifiUsers),
-    db.select({ count: sql<number>`count(*)` }).from(wifiUsers).where(eq(wifiUsers.status, 'pending')),
-    db.select({ count: sql<number>`count(*)` }).from(wifiSessions).where(eq(wifiSessions.status, 'active')),
-    db.select({ count: sql<number>`count(*)` }).from(wifiVouchers).where(sql`"usedCount" < "maxUses"`),
-  ])
+  try {
+    const [totalUsers, pendingUsers, activeSessions, activeVouchers] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(wifiUsers),
+      db.select({ count: sql<number>`count(*)` }).from(wifiUsers).where(eq(wifiUsers.status, 'pending')),
+      db.select({ count: sql<number>`count(*)` }).from(wifiSessions).where(eq(wifiSessions.status, 'active')),
+      db.select({ count: sql<number>`count(*)` }).from(wifiVouchers).where(sql`"usedCount" < "maxUses"`),
+    ])
 
-  return {
-    totalUsers: Number(totalUsers[0]?.count) || 0,
-    pendingUsers: Number(pendingUsers[0]?.count) || 0,
-    activeSessions: Number(activeSessions[0]?.count) || 0,
-    activeVouchers: Number(activeVouchers[0]?.count) || 0,
+    return {
+      totalUsers: Number(totalUsers[0]?.count) || 0,
+      pendingUsers: Number(pendingUsers[0]?.count) || 0,
+      activeSessions: Number(activeSessions[0]?.count) || 0,
+      activeVouchers: Number(activeVouchers[0]?.count) || 0,
+    }
+  } catch (error) {
+    // Nunca derruba o painel por falha de query (ex.: tabela/coluna faltante).
+    console.error('[v0] getDashboardStats falhou, retornando zeros:', error)
+    return { totalUsers: 0, pendingUsers: 0, activeSessions: 0, activeVouchers: 0 }
   }
 }

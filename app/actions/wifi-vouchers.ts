@@ -67,7 +67,12 @@ export async function generateVouchers(data: {
 
 /** Lista todos os vouchers. */
 export async function getVouchers() {
-  return db.select().from(wifiVouchers).orderBy(desc(wifiVouchers.createdAt))
+  try {
+    return await db.select().from(wifiVouchers).orderBy(desc(wifiVouchers.createdAt))
+  } catch (error) {
+    console.error('[v0] getVouchers falhou, retornando lista vazia:', error)
+    return []
+  }
 }
 
 /** Exclui um voucher. */

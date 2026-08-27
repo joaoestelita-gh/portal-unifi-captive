@@ -485,21 +485,26 @@ export async function loginWithVoucher(
 
 /** Lista sessões ativas com dados do usuário. */
 export async function getActiveSessions() {
-  const sessions = await db
-    .select({
-      session: wifiSessions,
-      user: wifiUsers,
-    })
-    .from(wifiSessions)
-    .leftJoin(wifiUsers, eq(wifiSessions.wifiUserId, wifiUsers.id))
-    .where(eq(wifiSessions.status, 'active'))
-    .orderBy(desc(wifiSessions.startTime))
+  try {
+    const sessions = await db
+      .select({
+        session: wifiSessions,
+        user: wifiUsers,
+      })
+      .from(wifiSessions)
+      .leftJoin(wifiUsers, eq(wifiSessions.wifiUserId, wifiUsers.id))
+      .where(eq(wifiSessions.status, 'active'))
+      .orderBy(desc(wifiSessions.startTime))
 
-  return sessions.map(s => ({
-    ...s.session,
-    userName: s.user?.name || 'Visitante',
-    userEmail: s.user?.email || '',
-  }))
+    return sessions.map(s => ({
+      ...s.session,
+      userName: s.user?.name || 'Visitante',
+      userEmail: s.user?.email || '',
+    }))
+  } catch (error) {
+    console.error('[v0] getActiveSessions falhou, retornando lista vazia:', error)
+    return []
+  }
 }
 
 /** Encerra uma sessão manualmente e desautoriza na controladora. */

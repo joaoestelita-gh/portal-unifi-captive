@@ -132,23 +132,30 @@ export async function addPreauthorizedMac(mac: string, label?: string | null) {
 
 /** Lista MACs pré-autorizados com dados do usuário vinculado (se houver). */
 export async function getPreauthorizedMacs() {
+  // Verificação de admin fora do try/catch: erros de auth devem propagar.
   await requireAdmin()
 
-  const rows = await db
-    .select({
-      preauth: wifiPreauthorizedMacs,
-      userName: wifiUsers.name,
-      userEmail: wifiUsers.email,
-    })
-    .from(wifiPreauthorizedMacs)
-    .leftJoin(wifiUsers, eq(wifiPreauthorizedMacs.linkedUserId, wifiUsers.id))
-    .orderBy(desc(wifiPreauthorizedMacs.createdAt))
+  try {
+    const rows = await db
+      .select({
+        preauth: wifiPreauthorizedMacs,
+        userName: wifiUsers.name,
+        userEmail: wifiUsers.email,
+      })
+      .from(wifiPreauthorizedMacs)
+      .leftJoin(wifiUsers, eq(wifiPreauthorizedMacs.linkedUserId, wifiUsers.id))
+      .orderBy(desc(wifiPreauthorizedMacs.createdAt))
 
-  return rows.map((r) => ({
-    ...r.preauth,
-    userName: r.userName || null,
-    userEmail: r.userEmail || null,
-  }))
+    return rows.map((r) => ({
+      ...r.preauth,
+      userName: r.userName || null,
+      userEmail: r.userEmail || null,
+    }))
+  } catch (error) {
+    // Não derruba o painel se a tabela/coluna ainda não existir no banco.
+    console.error('[v0] getPreauthorizedMacs falhou, retornando lista vazia:', error)
+    return []
+  }
 }
 
 /** Exclui uma entrada pré-autorizada. */
