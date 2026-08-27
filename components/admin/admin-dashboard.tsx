@@ -138,7 +138,7 @@ interface WifiUser {
 
 interface WifiSession {
   id: string
-  wifiUserId: string
+  wifiUserId: string | null
   macAddress: string
   ipAddress: string | null
   startTime: Date
