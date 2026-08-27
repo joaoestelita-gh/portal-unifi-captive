@@ -16,49 +16,65 @@ import { encryptSecret, maskSecret } from '@/lib/secret-crypto'
 import { updateControllerSettingsSchema, updatePortalSettingsSchema } from '@/lib/validations'
 
 /**
+ * Monta o objeto de configurações padrão do portal.
+ */
+function buildDefaultSettings() {
+  return {
+    id: 'default',
+    portalTitle: DEFAULT_PORTAL_SETTINGS.portalTitle,
+    portalSubtitle: DEFAULT_PORTAL_SETTINGS.portalSubtitle,
+    logoUrl: null,
+    backgroundUrl: null,
+    backgroundColor: null,
+    termsText: null,
+    primaryColor: DEFAULT_PORTAL_SETTINGS.primaryColor,
+    secondaryColor: DEFAULT_PORTAL_SETTINGS.secondaryColor,
+    colorScheme: 'default',
+    defaultSessionMinutes: DEFAULT_PORTAL_SETTINGS.defaultSessionMinutes,
+    defaultDailyMinutes: DEFAULT_PORTAL_SETTINGS.defaultDailyMinutes,
+    defaultSpeedDown: DEFAULT_PORTAL_SETTINGS.defaultSpeedDown,
+    defaultSpeedUp: DEFAULT_PORTAL_SETTINGS.defaultSpeedUp,
+    requireApproval: DEFAULT_PORTAL_SETTINGS.requireApproval,
+    controllerType: DEFAULT_PORTAL_SETTINGS.controllerType,
+    unifiEnabled: false,
+    arubaEnabled: false,
+    unifiControllerUrl: null,
+    unifiUsername: null,
+    unifiPassword: null,
+    unifiSite: null,
+    unifiApiKey: null,
+    unifiConsoleId: null,
+    unifiSiteId: null,
+    arubaControllerUrl: null,
+    arubaClientId: null,
+    arubaClientSecret: null,
+    successRedirectUrl: null,
+    updatedAt: new Date(),
+  }
+}
+
+/**
  * Busca as configurações do portal (ou cria defaults se não existirem).
+ *
+ * Envolvido em try/catch para que o portal do visitante nunca quebre por
+ * desalinhamento entre o schema (código) e o banco (ex.: migração pendente).
+ * Nesse caso, retorna configurações padrão em memória.
  */
 export async function getPortalSettings() {
-  const settings = await db.select().from(portalSettings).where(eq(portalSettings.id, 'default'))
+  try {
+    const settings = await db.select().from(portalSettings).where(eq(portalSettings.id, 'default'))
 
-  if (settings.length === 0) {
-    const defaultSettings = {
-      id: 'default',
-      portalTitle: DEFAULT_PORTAL_SETTINGS.portalTitle,
-      portalSubtitle: DEFAULT_PORTAL_SETTINGS.portalSubtitle,
-      logoUrl: null,
-      backgroundUrl: null,
-      backgroundColor: null,
-      termsText: null,
-      primaryColor: DEFAULT_PORTAL_SETTINGS.primaryColor,
-      secondaryColor: DEFAULT_PORTAL_SETTINGS.secondaryColor,
-      colorScheme: 'default',
-      defaultSessionMinutes: DEFAULT_PORTAL_SETTINGS.defaultSessionMinutes,
-      defaultDailyMinutes: DEFAULT_PORTAL_SETTINGS.defaultDailyMinutes,
-      defaultSpeedDown: DEFAULT_PORTAL_SETTINGS.defaultSpeedDown,
-      defaultSpeedUp: DEFAULT_PORTAL_SETTINGS.defaultSpeedUp,
-      requireApproval: DEFAULT_PORTAL_SETTINGS.requireApproval,
-      controllerType: DEFAULT_PORTAL_SETTINGS.controllerType,
-      unifiEnabled: false,
-      arubaEnabled: false,
-      unifiControllerUrl: null,
-      unifiUsername: null,
-      unifiPassword: null,
-      unifiSite: null,
-      unifiApiKey: null,
-      unifiConsoleId: null,
-      unifiSiteId: null,
-      arubaControllerUrl: null,
-      arubaClientId: null,
-      arubaClientSecret: null,
-      successRedirectUrl: null,
-      updatedAt: new Date(),
+    if (settings.length === 0) {
+      const defaultSettings = buildDefaultSettings()
+      await db.insert(portalSettings).values(defaultSettings)
+      return defaultSettings
     }
-    await db.insert(portalSettings).values(defaultSettings)
-    return defaultSettings
-  }
 
-  return settings[0]
+    return settings[0]
+  } catch (error) {
+    console.error('[v0] getPortalSettings falhou, usando defaults em memória:', error)
+    return buildDefaultSettings()
+  }
 }
 
 /**
