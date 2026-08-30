@@ -894,7 +894,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
                   <EmptyState
                     icon={Router}
                     title="Sem dados da controladora UniFi"
-                    description="Use “Testar Conexão” nas Ferramentas de Diagnóstico para carregar modelo, versão, APs, switches e clientes."
+                    description="Use o botão “Testar Conexão” na seção Ferramentas de Diagnóstico (mais abaixo) para carregar modelo, versão, APs, switches e clientes."
                   />
                 )}
 
