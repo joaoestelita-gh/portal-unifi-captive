@@ -1,0 +1,30 @@
+{
+	# O ponto de entrada é acessado por IPv4 cru (sem domínio), então não há
+	# como emitir certificado TLS confiável aqui. O captive portal do UniFi
+	# redireciona por HTTP na porta 80, então desligamos o HTTPS automático.
+	auto_https off
+	admin off
+}
+
+# Recebe o visitante em http://<ELASTIC_IP>/... e encaminha para o portal na
+# Vercel, preservando caminho e query string (mac, ap, ssid, url).
+:80 {
+	encode gzip
+
+	reverse_proxy https://{$PORTAL_UPSTREAM} {
+		# A Vercel roteia pelo cabeçalho Host; forçamos o domínio do portal para
+		# cair no projeto certo e para o app enxergar o host correto.
+		header_up Host {$PORTAL_UPSTREAM}
+		header_up X-Forwarded-Host {$PORTAL_UPSTREAM}
+
+		transport http {
+			tls
+			tls_server_name {$PORTAL_UPSTREAM}
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

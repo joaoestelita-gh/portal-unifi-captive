@@ -1,0 +1,19 @@
+services:
+  captive-proxy:
+    image: caddy:2-alpine
+    container_name: captive-portal-proxy
+    restart: unless-stopped
+    ports:
+      # O UniFi redireciona o visitante para http://<ELASTIC_IP>/... (porta 80).
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    # Backend do portal (na Vercel). Trocar apenas se o domínio mudar.
+    environment:
+      - PORTAL_UPSTREAM=portal.centernet.inf.br
+
+volumes:
+  caddy_data:
+  caddy_config:
