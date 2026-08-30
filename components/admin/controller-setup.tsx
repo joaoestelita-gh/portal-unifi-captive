@@ -307,6 +307,31 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
     }
   }, [controllerType, fetchPortalLogs])
 
+  // Ao abrir no modo UniFi Cloud com um console já salvo, carrega automaticamente
+  // as listas de consoles e sites para que os dropdowns exibam a seleção persistida
+  // com os nomes reais (o servidor usa a API key guardada em repouso).
+  useEffect(() => {
+    if (controllerType !== 'unifi-cloud') return
+    if (!settings.unifiConsoleId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const consolesRes = await fetchUnifiCloudConsoles(undefined)
+        if (cancelled || !consolesRes.success) return
+        setCloudConsoles(consolesRes.consoles)
+        const sitesRes = await fetchUnifiCloudSites(undefined, settings.unifiConsoleId as string)
+        if (cancelled || !sitesRes.success) return
+        setCloudSites(sitesRes.sites)
+      } catch {
+        // Silencioso: o usuário ainda pode usar "Buscar consoles"/"Buscar sites" manualmente.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
     setCopied(id)
@@ -769,12 +794,12 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
                     onChange={(e) => setUnifiConsoleId(e.target.value)}
                     className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="">{cloudConsoles.length ? 'Selecione um console' : (unifiConsoleId || 'Busque os consoles')}</option>
+                    <option value="">{cloudConsoles.length ? 'Selecione um console' : (unifiConsoleId ? 'Console salvo (carregando…)' : 'Busque os consoles')}</option>
                     {cloudConsoles.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}{c.ip ? ` (${c.ip})` : ''}</option>
                     ))}
                     {unifiConsoleId && !cloudConsoles.some((c) => c.id === unifiConsoleId) && (
-                      <option value={unifiConsoleId}>{unifiConsoleId} (salvo)</option>
+                      <option value={unifiConsoleId}>Console salvo — clique em Buscar consoles</option>
                     )}
                   </select>
                   <Button variant="outline" onClick={handleFetchConsoles} disabled={loadingConsoles}>
@@ -793,12 +818,12 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
                     onChange={(e) => setUnifiSiteId(e.target.value)}
                     className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="">{cloudSites.length ? 'Selecione um site' : (unifiSiteId || 'Busque os sites')}</option>
+                    <option value="">{cloudSites.length ? 'Selecione um site' : (unifiSiteId ? 'Site salvo (carregando…)' : 'Busque os sites')}</option>
                     {cloudSites.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                     {unifiSiteId && !cloudSites.some((s) => s.id === unifiSiteId) && (
-                      <option value={unifiSiteId}>{unifiSiteId} (salvo)</option>
+                      <option value={unifiSiteId}>Site salvo — clique em Buscar sites</option>
                     )}
                   </select>
                   <Button variant="outline" onClick={handleFetchCloudSites} disabled={loadingCloudSites || !unifiConsoleId}>

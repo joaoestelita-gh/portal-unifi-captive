@@ -2323,6 +2323,8 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
                 unifiUsername: settings.unifiUsername,
                 unifiPassword: settings.unifiPassword,
                 unifiSite: settings.unifiSite,
+                unifiConsoleId: settings.unifiConsoleId,
+                unifiSiteId: settings.unifiSiteId,
                 arubaControllerUrl: settings.arubaControllerUrl,
                 arubaClientId: settings.arubaClientId,
                 arubaClientSecret: settings.arubaClientSecret,
