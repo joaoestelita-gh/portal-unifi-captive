@@ -184,7 +184,8 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
   private async request<T>(
     config: ControllerConfig,
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
+    attempt = 1
   ): Promise<T> {
     const url = `${this.proxyBase(config)}${endpoint}`
     const response = await fetch(url, {
@@ -199,9 +200,20 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
 
     if (!response.ok) {
       const body = await response.text().catch(() => '')
+      const method = (options?.method || 'GET').toUpperCase()
+
+      // O Connector Proxy pode retornar 408 DeviceTimeout de forma transitória
+      // quando o console demora a responder pela nuvem. Refazemos GETs (idempotentes)
+      // algumas vezes antes de desistir — não repetimos POST/PUT/DELETE para não duplicar efeitos.
+      const isTransient = response.status === 408 || /DeviceTimeout|timeout/i.test(body)
+      if (isTransient && method === 'GET' && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 1200 * attempt))
+        return this.request<T>(config, endpoint, options, attempt + 1)
+      }
+
       throw new ControllerConnectionError(
         'unifi-cloud',
-        `API request failed: ${response.status} ${endpoint}`,
+        `API request failed: ${response.status} ${endpoint} — ${body.slice(0, 200)}`,
         { status: response.status, endpoint, body: body.slice(0, 300) }
       )
     }
@@ -285,7 +297,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       credentials: { apiKey },
       options: { consoleId },
     }
-    return adapter.getSites(config)
+    return adapter.getSitesOrThrow(config)
   }
 
   // ==========================================================================
@@ -417,18 +429,27 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
   }
 
   async getSites(config: ControllerConfig): Promise<ControllerSite[]> {
-    this.validateConfig(config)
     try {
-      const sites = await this.request<IntegrationSite[]>(config, '/sites')
-      return (sites || []).map((s) => ({
-        id: s.id,
-        name: s.name || s.desc || s.id,
-        description: s.desc,
-      }))
+      return await this.getSitesOrThrow(config)
     } catch (error) {
       console.error('[UniFi Cloud] Error listing sites:', error)
       return []
     }
+  }
+
+  /**
+   * Igual a getSites, mas PROPAGA o erro em vez de retornar lista vazia.
+   * Usado na descoberta do setup (Buscar sites) para que a UI exiba a causa real
+   * (ex.: timeout do console pela nuvem) em vez de "Nenhum site encontrado".
+   */
+  async getSitesOrThrow(config: ControllerConfig): Promise<ControllerSite[]> {
+    this.validateConfig(config)
+    const sites = await this.request<IntegrationSite[]>(config, '/sites')
+    return (sites || []).map((s) => ({
+      id: s.id,
+      name: s.name || s.desc || s.id,
+      description: s.desc,
+    }))
   }
 
   async getDevices(config: ControllerConfig): Promise<NetworkDevice[]> {
