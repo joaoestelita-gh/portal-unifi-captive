@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Copy, Check, Wifi, Shield, Eye, EyeOff, Loader2, CheckCircle, Server, RefreshCw, Info, Router, Globe, Users, Bug, Trash2, Plus, ExternalLink, ChevronDown, Activity, ShieldCheck, KeyRound } from 'lucide-react'
 import { updateControllerSettings } from '@/app/actions/wifi'
-import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2, authorizeTestMac, fetchUnifiCloudConsoles, fetchUnifiCloudSites, authorizeTestMacCloud } from '@/app/actions/controller'
+import { testUnifiConnectionV2, fetchUnifiSitesV2, fetchUnifiDetailsV2, authorizeTestMac, fetchUnifiCloudConsoles, fetchUnifiCloudSites, authorizeTestMacCloud, testUnifiCloudConnection } from '@/app/actions/controller'
 import { toast } from 'sonner'
 
 interface PortalLog {
@@ -256,6 +256,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
   const [cloudSites, setCloudSites] = useState<Array<{ id: string; name: string; description?: string }>>([])
   const [loadingConsoles, setLoadingConsoles] = useState(false)
   const [loadingCloudSites, setLoadingCloudSites] = useState(false)
+  const [testingCloud, setTestingCloud] = useState(false)
 
   // HP Aruba Instant On states
   const [arubaUrl, setArubaUrl] = useState(settings.arubaControllerUrl || '')
@@ -335,8 +336,13 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
       })
       if (!silent) toast.success('Configurações salvas', { description: 'As configurações da controladora foram salvas com sucesso.' })
       return true
-    } catch {
-      showError('Erro ao salvar configurações')
+    } catch (error) {
+      // Exibe a mensagem real do servidor em vez de um erro genérico,
+      // para que problemas de configuração (ex.: chave de criptografia ausente)
+      // fiquem visíveis em vez de mascarados.
+      const message = error instanceof Error && error.message ? error.message : 'Erro ao salvar configurações'
+      console.error('[v0] Erro ao salvar config da controladora:', error)
+      showError(message)
       return false
     } finally {
       setSaving(false)
@@ -478,6 +484,31 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
       showError(error instanceof Error ? error.message : 'Falha ao buscar sites.')
     }
     setLoadingCloudSites(false)
+  }
+
+  const handleTestCloud = async () => {
+    if (!unifiConsoleId) {
+      showError('Selecione um console primeiro (Buscar consoles).')
+      return
+    }
+    setTestingCloud(true)
+    try {
+      // Persiste a API key antes, para o fallback no servidor caso o campo esteja mascarado.
+      await handleSave(true)
+      const result = await testUnifiCloudConnection(unifiApiKey || undefined, unifiConsoleId, unifiSiteId)
+      if (result.success) {
+        setConnectionStatus('ok')
+        const extra = result.details?.totalSites != null ? ` (${result.details.totalSites} site(s) acessível(is))` : ''
+        toast.success('Credenciais válidas', { description: `${result.message}${extra}` })
+      } else {
+        setConnectionStatus('error')
+        showError(result.message)
+      }
+    } catch (error) {
+      setConnectionStatus('error')
+      showError(error instanceof Error ? error.message : 'Falha ao testar as credenciais.')
+    }
+    setTestingCloud(false)
   }
 
   const handleAuthorizeTestMacCloud = async () => {
@@ -777,11 +808,20 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Button onClick={() => handleSave()} disabled={saving} className="bg-primary hover:bg-primary/90">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                  Salvar configuração
-                </Button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  “Testar credenciais” valida a chave e o acesso ao console pela nuvem — não exige estar na rede local nem um dispositivo conectado.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={handleTestCloud} disabled={testingCloud || !unifiConsoleId}>
+                    {testingCloud ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+                    Testar credenciais
+                  </Button>
+                  <Button onClick={() => handleSave()} disabled={saving} className="bg-primary hover:bg-primary/90">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                    Salvar configuração
+                  </Button>
+                </div>
               </div>
             </div>
           </SectionCard>
@@ -889,7 +929,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
                   <EmptyState
                     icon={Router}
                     title="Sem dados da controladora UniFi"
-                    description="Use “Testar Conexão” nas Ferramentas de Diagnóstico para carregar modelo, versão, APs, switches e clientes."
+                    description="Use o botão “Testar Conexão” na seção Ferramentas de Diagnóstico (mais abaixo) para carregar modelo, versão, APs, switches e clientes."
                   />
                 )}
 
