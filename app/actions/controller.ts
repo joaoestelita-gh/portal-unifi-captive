@@ -472,6 +472,57 @@ export async function fetchUnifiCloudSites(apiKey: string | undefined, consoleId
   }
 }
 
+interface CloudTestResponse {
+  success: boolean
+  message: string
+  details?: { siteName?: string; totalSites?: number }
+}
+
+/**
+ * Testa as credenciais UniFi Cloud (API key + console + site) SEM precisar de um
+ * cliente conectado. Valida a autenticação na nuvem e a conectividade com o console
+ * via Connector Proxy (lista os sites). Ideal para validar a configuração de qualquer
+ * lugar, sem estar na rede local nem depender de um dispositivo no hotspot.
+ */
+export async function testUnifiCloudConnection(
+  apiKey: string | undefined,
+  consoleId: string,
+  siteId: string,
+): Promise<CloudTestResponse> {
+  const key = await resolveCloudApiKey(apiKey)
+  if (!key) {
+    return { success: false, message: 'Informe a API key do UniFi (unifi.ui.com → Settings → API).' }
+  }
+  if (!consoleId) {
+    return { success: false, message: 'Selecione um console primeiro (Buscar consoles).' }
+  }
+
+  const config: ControllerConfig = {
+    type: 'unifi-cloud',
+    baseUrl: 'https://api.ui.com',
+    credentials: { apiKey: key, site: siteId || '' },
+    options: { consoleId },
+  }
+
+  try {
+    const adapter = ControllerFactory.create('unifi-cloud')
+    const result = await adapter.testConnection(config)
+    if (!result.success) {
+      return { success: false, message: getSpecificErrorMessage(new Error(result.message), 'UniFi Cloud') }
+    }
+    return {
+      success: true,
+      message: result.message,
+      details: {
+        siteName: result.details?.siteName as string | undefined,
+        totalSites: result.details?.totalSites as number | undefined,
+      },
+    }
+  } catch (error) {
+    return { success: false, message: getSpecificErrorMessage(error, 'UniFi Cloud') }
+  }
+}
+
 /**
  * Diagnóstico ponta-a-ponta: autoriza um MAC de teste via UniFi Cloud.
  */
