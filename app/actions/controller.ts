@@ -100,6 +100,12 @@ function buildUnifiConfig(url: string, username: string, password: string, site:
 function getSpecificErrorMessage(error: unknown, controllerType: string): string {
   const message = error instanceof Error ? error.message : String(error)
 
+  // Connector Proxy (UniFi Cloud): console não respondeu a tempo pela nuvem.
+  // Vem antes do check genérico de "timeout" para dar uma orientação mais precisa.
+  if (message.includes('DeviceTimeout') || message.includes('408')) {
+    return `O console não respondeu a tempo pela nuvem (timeout do Connector). Ele pode estar offline, instável ou com a integração indisponível no momento. Aguarde alguns segundos e clique novamente — a busca já tenta automaticamente mais de uma vez.`
+  }
+
   // Erros de rede / DNS
   if (message.includes('ENOTFOUND') || message.includes('getaddrinfo')) {
     return `Endereço não encontrado. Verifique se a URL do ${controllerType} está correta e acessível pela rede.`
