@@ -293,11 +293,11 @@ export function PreauthMacsTab({ preauthMacs, users }: PreauthMacsTabProps) {
                           <TableCell>{row.label || <span className="text-muted-foreground">—</span>}</TableCell>
                           <TableCell>
                             {row.status === 'linked' ? (
-                              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0">
+                              <Badge className="bg-emerald-500/15 text-emerald-600 border-0">
                                 Vinculado
                               </Badge>
                             ) : (
-                              <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0">
+                              <Badge className="bg-amber-500/15 text-amber-600 border-0">
                                 Pendente
                               </Badge>
                             )}

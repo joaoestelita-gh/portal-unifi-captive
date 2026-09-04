@@ -48,54 +48,11 @@
   --info-foreground: oklch(0.99 0 0);
 }
 
-.dark {
-  --background: oklch(0.09 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.12 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.68 0.18 262);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.18 0 0);
-  --secondary-foreground: oklch(0.85 0 0);
-  --muted: oklch(0.18 0 0);
-  --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.72 0.14 238);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.18 0 0);
-  --ring: oklch(0.68 0.18 262);
-  --chart-1: oklch(0.68 0.18 262);
-  --chart-2: oklch(0.74 0.14 232);
-  --chart-3: oklch(0.7 0.16 285);
-  --chart-4: oklch(0.78 0.12 210);
-  --chart-5: oklch(0.72 0.16 160);
-  --sidebar: oklch(0.1 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.68 0.18 262);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.18 0 0);
-  --sidebar-accent-foreground: oklch(0.85 0 0);
-  --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.68 0.18 262);
-
-  /* Custom WiFi Portal Colors */
-  --success: oklch(0.7 0.18 145);
-  --success-foreground: oklch(0.98 0 0);
-  --warning: oklch(0.8 0.15 80);
-  --warning-foreground: oklch(0.15 0 0);
-  --info: oklch(0.68 0.18 262);
-  --info-foreground: oklch(0.98 0 0);
-}
-
 /* ============================================================
    Esquemas de cores fechados (presets do painel admin)
-   Aplicados via [data-theme="x"] (light) e .dark [data-theme="x"] (dark).
-   Cada preset redefine apenas os tokens de identidade da marca.
-   O esquema "default" usa o :root/.dark acima (ciano/verde).
+   Aplicados via [data-theme="x"]. Cada preset redefine apenas
+   os tokens de identidade da marca. O esquema "default" usa o
+   :root acima (ciano/verde).
    ============================================================ */
 
 /* --- Grafana: laranja + azul-índigo --- */
@@ -114,19 +71,6 @@
   --sidebar-primary: oklch(0.66 0.18 48);
   --sidebar-ring: oklch(0.66 0.18 48);
 }
-.dark [data-theme='grafana'] {
-  --primary: oklch(0.72 0.17 55);
-  --accent: oklch(0.68 0.16 265);
-  --ring: oklch(0.72 0.17 55);
-  --info: oklch(0.68 0.16 265);
-  --chart-1: oklch(0.72 0.17 55);
-  --chart-2: oklch(0.68 0.16 265);
-  --chart-3: oklch(0.7 0.18 300);
-  --chart-4: oklch(0.8 0.15 90);
-  --chart-5: oklch(0.7 0.16 150);
-  --sidebar-primary: oklch(0.72 0.17 55);
-  --sidebar-ring: oklch(0.72 0.17 55);
-}
 
 /* --- UniFi Site Manager: azul-índigo profundo --- */
 [data-theme='unifi'] {
@@ -143,19 +87,6 @@
   --chart-5: oklch(0.62 0.16 160);
   --sidebar-primary: oklch(0.55 0.19 262);
   --sidebar-ring: oklch(0.55 0.19 262);
-}
-.dark [data-theme='unifi'] {
-  --primary: oklch(0.68 0.18 262);
-  --accent: oklch(0.72 0.14 238);
-  --ring: oklch(0.68 0.18 262);
-  --info: oklch(0.68 0.18 262);
-  --chart-1: oklch(0.68 0.18 262);
-  --chart-2: oklch(0.74 0.14 232);
-  --chart-3: oklch(0.7 0.16 285);
-  --chart-4: oklch(0.78 0.12 210);
-  --chart-5: oklch(0.72 0.16 160);
-  --sidebar-primary: oklch(0.68 0.18 262);
-  --sidebar-ring: oklch(0.68 0.18 262);
 }
 
 /* --- Cloudflare: âmbar/dourado + navy --- */
@@ -174,20 +105,6 @@
   --sidebar-primary: oklch(0.72 0.16 65);
   --sidebar-ring: oklch(0.72 0.16 65);
 }
-.dark [data-theme='cloudflare'] {
-  --primary: oklch(0.78 0.16 68);
-  --primary-foreground: oklch(0.18 0 0);
-  --accent: oklch(0.62 0.1 250);
-  --ring: oklch(0.78 0.16 68);
-  --info: oklch(0.62 0.1 250);
-  --chart-1: oklch(0.78 0.16 68);
-  --chart-2: oklch(0.7 0.14 45);
-  --chart-3: oklch(0.66 0.11 250);
-  --chart-4: oklch(0.82 0.15 90);
-  --chart-5: oklch(0.7 0.16 150);
-  --sidebar-primary: oklch(0.78 0.16 68);
-  --sidebar-ring: oklch(0.78 0.16 68);
-}
 
 /* --- GitHub: verde + azul --- */
 [data-theme='github'] {
@@ -205,19 +122,6 @@
   --sidebar-primary: oklch(0.63 0.15 150);
   --sidebar-ring: oklch(0.63 0.15 150);
 }
-.dark [data-theme='github'] {
-  --primary: oklch(0.7 0.16 150);
-  --accent: oklch(0.68 0.15 255);
-  --ring: oklch(0.7 0.16 150);
-  --info: oklch(0.68 0.15 255);
-  --chart-1: oklch(0.7 0.16 150);
-  --chart-2: oklch(0.68 0.15 255);
-  --chart-3: oklch(0.7 0.18 285);
-  --chart-4: oklch(0.8 0.15 90);
-  --chart-5: oklch(0.7 0.16 30);
-  --sidebar-primary: oklch(0.7 0.16 150);
-  --sidebar-ring: oklch(0.7 0.16 150);
-}
 
 /* --- Azure Portal: azul-céu + teal --- */
 [data-theme='azure'] {
@@ -234,19 +138,6 @@
   --chart-5: oklch(0.62 0.16 150);
   --sidebar-primary: oklch(0.58 0.14 245);
   --sidebar-ring: oklch(0.58 0.14 245);
-}
-.dark [data-theme='azure'] {
-  --primary: oklch(0.7 0.14 245);
-  --accent: oklch(0.72 0.11 220);
-  --ring: oklch(0.7 0.14 245);
-  --info: oklch(0.7 0.14 245);
-  --chart-1: oklch(0.7 0.14 245);
-  --chart-2: oklch(0.72 0.11 220);
-  --chart-3: oklch(0.7 0.16 285);
-  --chart-4: oklch(0.78 0.12 195);
-  --chart-5: oklch(0.72 0.16 150);
-  --sidebar-primary: oklch(0.7 0.14 245);
-  --sidebar-ring: oklch(0.7 0.14 245);
 }
 
 @theme inline {
@@ -305,7 +196,7 @@
   }
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

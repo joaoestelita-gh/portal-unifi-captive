@@ -54,6 +54,38 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
   // LGPD consent
   const [lgpdAccepted, setLgpdAccepted] = useState(true)
 
+  // Constrói a sessionMeta compartilhada por login/voucher/cadastro.
+  const buildSessionMeta = () => ({
+    apName: apMac || undefined,
+    ssid: ssid || undefined,
+    site: site || undefined,
+    lgpdAccepted,
+  })
+
+  // Redireciona para a tela de sucesso (ou para o redirect do controlador, ex: Aruba).
+  // Reutilizado por login, voucher e auto-login pós-cadastro.
+  const redirectToSuccess = (result: {
+    sessionMinutes?: number
+    userName?: string
+    redirectUrl?: string
+  }) => {
+    // Se o controlador retornou um redirect próprio (ex: Aruba), usa-o.
+    if (result.redirectUrl) {
+      window.location.href = result.redirectUrl
+      return
+    }
+
+    const successUrl = new URL('/portal/success', window.location.origin)
+    successUrl.searchParams.set('minutes', String(result.sessionMinutes))
+    successUrl.searchParams.set('name', result.userName || 'Visitante')
+    // `redirectUrl` já chega sanitizado do servidor (PortalEntry); o placeholder
+    // `conectar` e valores inseguros viram undefined lá, então basta checar presença.
+    if (redirectUrl) {
+      successUrl.searchParams.set('redirect', redirectUrl)
+    }
+    window.location.href = successUrl.toString()
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (settings.termsText && !lgpdAccepted) {
@@ -62,51 +94,38 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
     }
     setLoading(true)
     setError(null)
-    
-    const sessionMeta = { apName: apMac || undefined, ssid: ssid || undefined, site: site || undefined, lgpdAccepted }
-    const result = await loginWifiUser(loginEmail, loginPassword, macAddress, detectedController, arubaParams, sessionMeta)
-    
+
+    const result = await loginWifiUser(loginEmail, loginPassword, macAddress, detectedController, arubaParams, buildSessionMeta())
+
     if (result.success) {
-      // Build success page URL with parameters
-      const successUrl = new URL('/portal/success', window.location.origin)
-      successUrl.searchParams.set('minutes', String(result.sessionMinutes))
-      successUrl.searchParams.set('name', result.userName || 'Visitante')
-      // `redirectUrl` já chega sanitizado do servidor (PortalEntry); o placeholder
-      // `conectar` e valores inseguros viram undefined lá, então basta checar presença.
-      if (redirectUrl) {
-        successUrl.searchParams.set('redirect', redirectUrl)
-      }
-      
-      // If controller returned a redirect URL (e.g., Aruba), use that
-      if (result.redirectUrl) {
-        window.location.href = result.redirectUrl
-      } else {
-        window.location.href = successUrl.toString()
-      }
+      redirectToSuccess(result)
     } else {
       setError(result.error || 'Erro ao fazer login')
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (settings.termsText && !lgpdAccepted) {
+      setError('Você precisa aceitar os termos de uso para continuar.')
+      return
+    }
     setLoading(true)
     setError(null)
-    
+
     if (registerPassword !== registerConfirmPassword) {
       setError('As senhas não coincidem')
       setLoading(false)
       return
     }
-    
+
     if (registerPassword.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres')
       setLoading(false)
       return
     }
-    
+
     const result = await registerWifiUser({
       name: registerName,
       email: registerEmail,
@@ -114,19 +133,32 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
       password: registerPassword,
       macAddress: macAddress || undefined,
     })
-    
-    if (result.success) {
-      if (result.requiresApproval) {
-        setSuccess('Cadastro realizado! Aguarde a aprovação do administrador.')
-      } else {
-        setSuccess('Cadastro realizado! Agora você pode fazer login.')
-        setActiveTab('login')
-      }
-    } else {
+
+    if (!result.success) {
       setError(result.error || 'Erro ao cadastrar')
+      setLoading(false)
+      return
     }
-    
-    setLoading(false)
+
+    // Usuário ainda precisa de aprovação do admin → não há acesso a liberar.
+    if (result.requiresApproval) {
+      setSuccess('Cadastro realizado! Aguarde a aprovação do administrador.')
+      setLoading(false)
+      return
+    }
+
+    // Autorizado/pré-autorizado: já loga automaticamente (autoriza na controladora,
+    // cria sessão e redireciona) reutilizando o fluxo de login existente.
+    const loginResult = await loginWifiUser(registerEmail, registerPassword, macAddress, detectedController, arubaParams, buildSessionMeta())
+
+    if (loginResult.success) {
+      redirectToSuccess(loginResult)
+    } else {
+      // Cadastro ok, mas a liberação automática falhou → cai no login manual.
+      setSuccess('Cadastro realizado! Agora você pode fazer login.')
+      setActiveTab('login')
+      setLoading(false)
+    }
   }
 
   const handleVoucher = async (e: React.FormEvent) => {
@@ -137,32 +169,15 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
     }
     setLoading(true)
     setError(null)
-    
-    const sessionMeta = { apName: apMac || undefined, ssid: ssid || undefined, site: site || undefined, lgpdAccepted }
-    const result = await loginWithVoucher(voucherCode, macAddress, detectedController, arubaParams, sessionMeta)
-    
+
+    const result = await loginWithVoucher(voucherCode, macAddress, detectedController, arubaParams, buildSessionMeta())
+
     if (result.success) {
-      // Build success page URL with parameters
-      const successUrl = new URL('/portal/success', window.location.origin)
-      successUrl.searchParams.set('minutes', String(result.sessionMinutes))
-      successUrl.searchParams.set('name', 'Visitante')
-      // `redirectUrl` já chega sanitizado do servidor (PortalEntry); o placeholder
-      // `conectar` e valores inseguros viram undefined lá, então basta checar presença.
-      if (redirectUrl) {
-        successUrl.searchParams.set('redirect', redirectUrl)
-      }
-      
-      // If controller returned a redirect URL (e.g., Aruba), use that
-      if (result.redirectUrl) {
-        window.location.href = result.redirectUrl
-      } else {
-        window.location.href = successUrl.toString()
-      }
+      redirectToSuccess(result)
     } else {
       setError(result.error || 'Código inválido')
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   const primaryColor = settings.primaryColor || '#3b82f6'
@@ -228,7 +243,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
         
         <CardContent>
           {!macAddress && (
-            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-600 dark:text-amber-400 text-sm">
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-600 text-sm">
               Aviso: MAC address não detectado. O acesso pode não ser autorizado automaticamente.
             </div>
           )}

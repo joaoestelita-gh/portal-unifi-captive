@@ -57,7 +57,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -872,7 +871,6 @@ const [passwordSuccess, setPasswordSuccess] = useState('')
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
-            <ThemeToggle className="bg-card/50" />
           </div>
         </div>
 

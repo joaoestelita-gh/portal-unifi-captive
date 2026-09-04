@@ -63,7 +63,7 @@ export function ImageUpload({
       <div className="flex items-center gap-2">
         <Label className="text-muted-foreground">{label}</Label>
         {justUploaded && (
-          <Badge className="gap-1 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 animate-in fade-in duration-200">
+          <Badge className="gap-1 bg-emerald-500/15 text-emerald-600 border-emerald-500/30 animate-in fade-in duration-200">
             <CheckCircle2 className="w-3 h-3" />
             Enviada
           </Badge>

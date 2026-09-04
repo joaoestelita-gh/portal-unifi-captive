@@ -7,8 +7,7 @@
  * todo o /admin (dashboard + login). Expõe um contexto para que o seletor de
  * esquema na aba Configurações consiga fazer preview instantâneo antes de salvar.
  *
- * O modo claro/escuro continua sendo controlado pelo next-themes (classe .dark
- * no <html>); o preset é ortogonal e apenas redefine os tokens de marca.
+ * O portal usa tema claro fixo; o preset apenas redefine os tokens de marca.
  */
 
 import { createContext, useContext, useState, type ReactNode } from 'react'

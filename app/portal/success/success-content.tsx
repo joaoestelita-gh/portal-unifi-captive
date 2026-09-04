@@ -140,7 +140,7 @@ export function SuccessContent({ sessionMinutes, userName, redirectUrl }: Succes
         <CardContent className="pt-8 pb-6 px-6 text-center">
           {/* Success Icon */}
           <div className="w-20 h-20 bg-emerald-500/15 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle className="w-12 h-12 text-emerald-600" />
           </div>
           
           {/* Success Message */}
@@ -165,10 +165,10 @@ export function SuccessContent({ sessionMinutes, userName, redirectUrl }: Succes
                 </span>
               )}
               {connection === 'online' && (
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Internet confirmada</span>
+                <span className="font-semibold text-emerald-600">Internet confirmada</span>
               )}
               {connection === 'offline' && (
-                <span className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
+                <span className="flex items-center gap-1.5 font-semibold text-amber-600">
                   <WifiOff className="w-4 h-4" />
                   Sem acesso
                 </span>
@@ -217,7 +217,7 @@ export function SuccessContent({ sessionMinutes, userName, redirectUrl }: Succes
             </p>
           )}
           {connection === 'offline' && (
-            <p className="text-sm text-amber-600 dark:text-amber-400 mt-4">
+            <p className="text-sm text-amber-600 mt-4">
               Ainda não detectamos acesso à internet. Aguarde alguns segundos e tente novamente.
             </p>
           )}
