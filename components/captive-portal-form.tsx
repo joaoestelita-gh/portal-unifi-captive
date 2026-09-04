@@ -26,11 +26,12 @@ interface CaptivePortalFormProps {
   redirectUrl?: string
   apMac?: string
   ssid?: string
+  site?: string
   detectedController?: string | null
   arubaParams?: ArubaRedirectParams
 }
 
-export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https://google.com', ssid, detectedController, arubaParams }: CaptivePortalFormProps) {
+export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https://google.com', ssid, apMac, site, detectedController, arubaParams }: CaptivePortalFormProps) {
   const [activeTab, setActiveTab] = useState('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,7 +63,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
     setLoading(true)
     setError(null)
     
-    const sessionMeta = { apName: undefined, ssid: ssid || undefined, lgpdAccepted }
+    const sessionMeta = { apName: apMac || undefined, ssid: ssid || undefined, site: site || undefined, lgpdAccepted }
     const result = await loginWifiUser(loginEmail, loginPassword, macAddress, detectedController, arubaParams, sessionMeta)
     
     if (result.success) {
@@ -135,7 +136,7 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
     setLoading(true)
     setError(null)
     
-    const sessionMeta = { apName: undefined, ssid: ssid || undefined, lgpdAccepted }
+    const sessionMeta = { apName: apMac || undefined, ssid: ssid || undefined, site: site || undefined, lgpdAccepted }
     const result = await loginWithVoucher(voucherCode, macAddress, detectedController, arubaParams, sessionMeta)
     
     if (result.success) {

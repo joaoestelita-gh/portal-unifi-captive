@@ -8,6 +8,7 @@ const SESSION_COOKIE_NAME = 'session_token'
 const PUBLIC_ROUTES = [
   '/', // Portal captivo (página principal)
   '/portal', // Portal captivo
+  '/guest', // Portal captivo — endpoint canônico UniFi (/guest/s/<site>/)
   '/admin/login', // Login do admin
   '/api/radius', // Endpoint chamado pelo FreeRADIUS
   '/api/file', // Entrega pública de imagens do portal

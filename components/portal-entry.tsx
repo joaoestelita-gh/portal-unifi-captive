@@ -1,6 +1,7 @@
 import { getPortalSettings, checkActiveSession } from '@/app/actions/wifi'
 import { CaptivePortalForm } from '@/components/captive-portal-form'
 import { addPortalLog } from '@/lib/portal-logs'
+import { normalizeMac } from '@/lib/validations'
 import { redirect } from 'next/navigation'
 
 export interface PortalSearchParams {
@@ -9,6 +10,10 @@ export interface PortalSearchParams {
   url?: string
   t?: string
   ssid?: string
+  // UniFi External Hotspot envia o MAC do CLIENTE em `id` (não em `mac`).
+  id?: string
+  // Site do controller, injetado pela rota /guest/s/[site] (não vem na query).
+  site?: string
   // Aruba Instant On parameters
   cmd?: string
   switchip?: string
@@ -24,21 +29,44 @@ export interface PortalSearchParams {
   force?: string
 }
 
+// A `url` original vem do redirect e é controlada pelo cliente. Só aceitamos
+// http(s) absoluto — evita open-redirect via javascript:/data: e valores quebrados.
+function sanitizeRedirectUrl(raw?: string): string | undefined {
+  if (!raw) return undefined
+  try {
+    const parsed = new URL(raw)
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString()
+    }
+  } catch {
+    // valor não é URL absoluta válida
+  }
+  return undefined
+}
+
 // Shared captive portal entry logic used by both `/` and `/portal`.
 // Handles UniFi and Aruba Instant On redirect parameters, logging,
 // and auto-reconnect for devices with an active session.
 export async function PortalEntry({ params }: { params: PortalSearchParams }) {
   const settings = await getPortalSettings()
 
-  // UniFi sends: mac, ap, url, t, ssid
+  // UniFi External Hotspot sends: ap (AP MAC), id (client MAC), t, url, ssid
   // Aruba Instant On sends: cmd, clientmac/mac, clientip/ip, essid, apname, apmac, switchip, vcname, url
-  const macAddress = params.mac || params.clientmac || ''
+  const rawMac = params.id || params.mac || params.clientmac || ''
+  const macAddress = normalizeMac(rawMac) || ''
   const clientIp = params.ip || params.clientip || ''
-  const redirectUrl = params.url || settings.successRedirectUrl || 'https://google.com'
+  // Destino pós-login: a config do sistema (successRedirectUrl) tem prioridade sobre
+  // a `url` original do cliente. Só cai na `url` do redirect se o admin não configurou.
+  const redirectUrl = settings.successRedirectUrl || sanitizeRedirectUrl(params.url) || 'https://google.com'
   const ssid = params.ssid || params.essid || ''
+  // MAC do AP UniFi (para auditoria da sessão).
+  const apMac = params.ap || params.apmac || ''
+  // Site da sessão: respeita o site configurado no sistema (usado na autorização),
+  // não o valor do path do redirect (controlado pelo cliente).
+  const site = settings.unifiSite || params.site || ''
 
   // Detect controller type from the redirect parameters
-  const controller = params.cmd ? 'aruba' : params.ap ? 'unifi' : 'direct'
+  const controller = params.cmd ? 'aruba' : (params.ap || params.id) ? 'unifi' : 'direct'
 
   // Aruba Instant On ECP params. `switchip` is the captive-portal domain the
   // AP wants us to authenticate against after login (e.g. securelogin.arubanetworks.com).
@@ -101,6 +129,8 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
       macAddress={macAddress}
       redirectUrl={redirectUrl}
       ssid={ssid}
+      apMac={apMac || undefined}
+      site={site || undefined}
       detectedController={controller !== 'direct' ? controller : null}
       arubaParams={arubaParams}
     />
