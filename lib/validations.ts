@@ -102,6 +102,33 @@ export function normalizeMac(raw: string | null | undefined): string | null {
   return hex.match(/.{2}/g)!.join(':')
 }
 
+// --- Redirect URL helpers ---
+
+/**
+ * Sanitiza uma URL de redirect vinda do cliente (query string do redirect do
+ * controlador, params `redirect`/`url`). Só aceitamos http(s) absoluto — evita
+ * open-redirect via `javascript:`/`data:` e valores quebrados.
+ *
+ * O host placeholder `conectar` (probe de captive portal) é tratado como
+ * "sem redirect" para não jogar o usuário numa URL inválida.
+ *
+ * Retorna a URL normalizada, ou `undefined` se não for segura/válida.
+ */
+export function sanitizeRedirectUrl(raw?: string | null): string | undefined {
+  if (!raw) return undefined
+  try {
+    const parsed = new URL(raw)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return undefined
+    }
+    if (parsed.hostname === 'conectar') return undefined
+    return parsed.toString()
+  } catch {
+    // valor não é URL absoluta válida
+    return undefined
+  }
+}
+
 // --- Pre-authorized MAC validations ---
 
 export const preauthMacSchema = z.object({

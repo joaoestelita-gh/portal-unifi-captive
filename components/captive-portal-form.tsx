@@ -71,7 +71,9 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
       const successUrl = new URL('/portal/success', window.location.origin)
       successUrl.searchParams.set('minutes', String(result.sessionMinutes))
       successUrl.searchParams.set('name', result.userName || 'Visitante')
-      if (redirectUrl && redirectUrl !== 'http://conectar') {
+      // `redirectUrl` já chega sanitizado do servidor (PortalEntry); o placeholder
+      // `conectar` e valores inseguros viram undefined lá, então basta checar presença.
+      if (redirectUrl) {
         successUrl.searchParams.set('redirect', redirectUrl)
       }
       
@@ -144,7 +146,9 @@ export function CaptivePortalForm({ settings, macAddress, redirectUrl = 'https:/
       const successUrl = new URL('/portal/success', window.location.origin)
       successUrl.searchParams.set('minutes', String(result.sessionMinutes))
       successUrl.searchParams.set('name', 'Visitante')
-      if (redirectUrl && redirectUrl !== 'http://conectar') {
+      // `redirectUrl` já chega sanitizado do servidor (PortalEntry); o placeholder
+      // `conectar` e valores inseguros viram undefined lá, então basta checar presença.
+      if (redirectUrl) {
         successUrl.searchParams.set('redirect', redirectUrl)
       }
       

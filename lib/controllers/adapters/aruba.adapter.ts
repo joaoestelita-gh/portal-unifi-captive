@@ -35,6 +35,7 @@ import {
   ControllerConnectionError,
   ControllerNotConfiguredError,
 } from '../types'
+import { sanitizeRedirectUrl } from '@/lib/validations'
 
 /**
  * Parâmetros enviados pelo AP Aruba Instant On no redirect do captive portal.
@@ -348,21 +349,31 @@ export class ArubaAdapter implements WifiControllerAdapter {
     credentials?: ArubaAuthCredentials,
     finalRedirect?: string
   ): string {
-    // Determinar o host de login. Prioridade: switchip do AP > URL configurada
+    // Determinar o host de login. Prioridade: switchip do AP > URL configurada.
+    //
+    // `switchip` vem da query do redirect (controlável pelo cliente) e recebe o
+    // token RADIUS como user/password. Um `switchip` para um host externo forjado
+    // vazaria o token no browser da vítima, então só aceitamos hosts plausíveis de
+    // AP: o controller configurado, o domínio hospedado do Aruba, ou IPs privados/
+    // link-local (LAN do AP). Qualquer outro cai no baseUrl configurado.
     let authUrl: URL
 
     const switchip = arubaParams?.switchip?.trim()
-    if (switchip) {
-      let host = switchip
-      if (!/^https?:\/\//i.test(host)) {
-        host = `https://${host}`
+    const switchUrl = switchip
+      ? this.parseSwitchipUrl(switchip)
+      : undefined
+
+    if (switchUrl && this.isAllowedSwitchHost(switchUrl.hostname, config)) {
+      if (switchUrl.pathname === '/' || switchUrl.pathname === '') {
+        switchUrl.pathname = '/cgi-bin/login'
       }
-      const base = new URL(host)
-      if (base.pathname === '/' || base.pathname === '') {
-        base.pathname = '/cgi-bin/login'
-      }
-      authUrl = base
+      authUrl = switchUrl
     } else {
+      if (switchip && !switchUrl) {
+        console.warn('[Aruba] switchip inválido, usando baseUrl configurado')
+      } else if (switchip) {
+        console.warn(`[Aruba] switchip não confiável (${switchUrl?.hostname}), usando baseUrl configurado`)
+      }
       authUrl = new URL(config.baseUrl)
     }
 
@@ -374,10 +385,48 @@ export class ArubaAdapter implements WifiControllerAdapter {
     authUrl.searchParams.set('user', token)
     authUrl.searchParams.set('password', token)
 
-    // URL de destino após sucesso
-    const destination = finalRedirect || arubaParams?.url
+    // URL de destino após sucesso. `finalRedirect` é config do admin (confiável);
+    // a `url` do AP é controlada pelo cliente, então sanitiza.
+    const destination = finalRedirect || sanitizeRedirectUrl(arubaParams?.url)
     if (destination) authUrl.searchParams.set('url', destination)
 
     return authUrl.toString()
+  }
+
+  /** Normaliza o `switchip` do AP em URL, adicionando https:// se necessário. */
+  private parseSwitchipUrl(switchip: string): URL | undefined {
+    const withProto = /^https?:\/\//i.test(switchip) ? switchip : `https://${switchip}`
+    try {
+      return new URL(withProto)
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
+   * Verifica se o host do `switchip` é confiável para receber o token RADIUS:
+   * o próprio controller configurado, o domínio hospedado do Aruba, ou um
+   * endereço privado/link-local (LAN do AP Instant On).
+   */
+  private isAllowedSwitchHost(host: string, config: ControllerConfig): boolean {
+    const h = host.toLowerCase()
+
+    try {
+      if (h === new URL(config.baseUrl).hostname.toLowerCase()) return true
+    } catch {
+      // baseUrl inválido — ignora esta checagem
+    }
+
+    if (h === 'securelogin.arubanetworks.com' || h.endsWith('.arubanetworks.com')) {
+      return true
+    }
+
+    // IPs privados (RFC 1918) e link-local — LAN do AP
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h)) return true
+    if (/^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(h)) return true
+    if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(h)) return true
+
+    return false
   }
 }

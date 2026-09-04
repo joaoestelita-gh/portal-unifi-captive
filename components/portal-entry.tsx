@@ -1,7 +1,7 @@
 import { getPortalSettings, checkActiveSession } from '@/app/actions/wifi'
 import { CaptivePortalForm } from '@/components/captive-portal-form'
 import { addPortalLog } from '@/lib/portal-logs'
-import { normalizeMac } from '@/lib/validations'
+import { normalizeMac, sanitizeRedirectUrl } from '@/lib/validations'
 import { redirect } from 'next/navigation'
 
 export interface PortalSearchParams {
@@ -40,21 +40,6 @@ function isRedirectFresh(t?: string): boolean {
   if (!Number.isFinite(ts) || ts <= 0) return true
   const nowSec = Math.floor(Date.now() / 1000)
   return Math.abs(nowSec - ts) <= REDIRECT_MAX_AGE_SECONDS
-}
-
-// A `url` original vem do redirect e é controlada pelo cliente. Só aceitamos
-// http(s) absoluto — evita open-redirect via javascript:/data: e valores quebrados.
-function sanitizeRedirectUrl(raw?: string): string | undefined {
-  if (!raw) return undefined
-  try {
-    const parsed = new URL(raw)
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      return parsed.toString()
-    }
-  } catch {
-    // valor não é URL absoluta válida
-  }
-  return undefined
 }
 
 // Shared captive portal entry logic used by both `/` and `/portal`.
