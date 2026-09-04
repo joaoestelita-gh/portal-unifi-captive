@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, Wifi, Clock, ArrowRight } from 'lucide-react'
+import { CheckCircle, Wifi, Clock, ArrowRight, Loader2, WifiOff, RefreshCw } from 'lucide-react'
 
 interface SuccessContentProps {
   sessionMinutes: string
@@ -11,21 +11,115 @@ interface SuccessContentProps {
   redirectUrl: string
 }
 
+// Endpoints públicos que respondem HTTP 204 (sem corpo) quando há internet real.
+// Enquanto o dispositivo estiver preso no captive portal, a requisição é
+// interceptada/redirecionada e a Promise rejeita — o que sinaliza "sem acesso".
+const CONNECTIVITY_ENDPOINTS = [
+  'https://www.gstatic.com/generate_204',
+  'https://connectivitycheck.gstatic.com/generate_204',
+  'https://cloudflare.com/cdn-cgi/trace',
+]
+
+const CHECK_TIMEOUT_MS = 5000
+
+// URL de health EXTERNO (fora da walled garden). Quando definida, é o sinal
+// decisivo de internet realmente liberada — ler status 204 dela distingue
+// "liberado" de "ainda cativo". Ver NEXT_PUBLIC_CONNECTIVITY_CHECK_URL no
+// .env.example.
+const EXTERNAL_CHECK_URL = process.env.NEXT_PUBLIC_CONNECTIVITY_CHECK_URL
+
+type ConnectionStatus = 'checking' | 'online' | 'offline'
+
+// Lê o status HTTP real (com CORS) de um endpoint que deve responder 204.
+// Se o captive portal ainda estiver interceptando e redirecionar para uma
+// página HTML, o status não será 204 (ou dará erro de CORS/rede) e tratamos
+// como "sem acesso" — elimina o falso positivo do no-cors.
+async function checkStatus204(url: string, signal: AbortSignal): Promise<boolean> {
+  try {
+    const sep = url.includes('?') ? '&' : '?'
+    const res = await fetch(`${url}${sep}_=${Date.now()}`, {
+      method: 'GET',
+      cache: 'no-store',
+      signal,
+    })
+    return res.status === 204
+  } catch {
+    return false
+  }
+}
+
 export function SuccessContent({ sessionMinutes, userName, redirectUrl }: SuccessContentProps) {
   const [countdown, setCountdown] = useState(10)
-  
-  // Auto-redirect countdown
+  const [connection, setConnection] = useState<ConnectionStatus>('checking')
+
+  const checkConnectivity = useCallback(async () => {
+    setConnection('checking')
+
+    // 1) Sinal decisivo: health EXTERNO (fora da walled garden), status 204
+    //    legível. Se configurado, é autoritativo — não caímos no fallback
+    //    no-cors, que reintroduziria o falso positivo que ele veio eliminar.
+    if (EXTERNAL_CHECK_URL) {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS)
+      const externalOk = await checkStatus204(EXTERNAL_CHECK_URL, controller.signal)
+      clearTimeout(timeout)
+      setConnection(externalOk ? 'online' : 'offline')
+      return
+    }
+
+    // 2) Sem health externo: confirma que o backend do app responde 204.
+    const healthController = new AbortController()
+    const healthTimeout = setTimeout(() => healthController.abort(), CHECK_TIMEOUT_MS)
+    const healthOk = await checkStatus204('/api/health', healthController.signal)
+    clearTimeout(healthTimeout)
+    if (healthOk) {
+      setConnection('online')
+      return
+    }
+
+    // 3) Fallback: endpoints públicos via no-cors (só distingue "resolveu" de
+    //    "erro de rede", mas cobre o caso de o /api/health estar indisponível).
+    for (const endpoint of CONNECTIVITY_ENDPOINTS) {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS)
+      try {
+        await fetch(`${endpoint}?_=${Date.now()}`, {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        clearTimeout(timeout)
+        setConnection('online')
+        return
+      } catch {
+        clearTimeout(timeout)
+        // Tenta o próximo endpoint da lista.
+      }
+    }
+
+    setConnection('offline')
+  }, [])
+
+  // Dispara a checagem ao montar a tela.
   useEffect(() => {
+    checkConnectivity()
+  }, [checkConnectivity])
+
+  // Auto-redirect countdown — só corre depois que a internet foi confirmada.
+  useEffect(() => {
+    if (connection !== 'online') return
+
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
       return () => clearTimeout(timer)
     }
-    
+
     if (countdown === 0) {
       window.location.href = redirectUrl
     }
-  }, [countdown, redirectUrl])
-  
+  }, [connection, countdown, redirectUrl])
+
   const handleContinue = () => {
     window.location.href = redirectUrl
   }
@@ -64,7 +158,21 @@ export function SuccessContent({ sessionMinutes, userName, redirectUrl }: Succes
                 <Wifi className="w-5 h-5" />
                 <span>Status</span>
               </div>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">Ativo</span>
+              {connection === 'checking' && (
+                <span className="flex items-center gap-1.5 font-semibold text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Verificando...
+                </span>
+              )}
+              {connection === 'online' && (
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Internet confirmada</span>
+              )}
+              {connection === 'offline' && (
+                <span className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
+                  <WifiOff className="w-4 h-4" />
+                  Sem acesso
+                </span>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -78,18 +186,39 @@ export function SuccessContent({ sessionMinutes, userName, redirectUrl }: Succes
           </div>
           
           {/* Continue Button */}
-          <Button 
-            onClick={handleContinue}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base"
-          >
-            Continuar Navegando
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
-          
-          {/* Auto-redirect notice */}
-          {countdown > 0 && (
+          {connection === 'offline' ? (
+            <Button
+              onClick={checkConnectivity}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white h-12 text-base"
+            >
+              Tentar novamente
+              <RefreshCw className="w-5 h-5 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleContinue}
+              disabled={connection === 'checking'}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base disabled:opacity-60"
+            >
+              Continuar Navegando
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          )}
+
+          {/* Status notices */}
+          {connection === 'checking' && (
+            <p className="text-sm text-muted-foreground mt-4">
+              Verificando o acesso à internet...
+            </p>
+          )}
+          {connection === 'online' && countdown > 0 && (
             <p className="text-sm text-muted-foreground mt-4">
               Redirecionando automaticamente em {countdown} segundos...
+            </p>
+          )}
+          {connection === 'offline' && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 mt-4">
+              Ainda não detectamos acesso à internet. Aguarde alguns segundos e tente novamente.
             </p>
           )}
           
