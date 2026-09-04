@@ -9,8 +9,8 @@
  * A UI NUNCA conversa diretamente com a API de nenhum fabricante.
  */
 
-import { ControllerService, ControllerFactory, UnifiCloudAdapter } from '@/lib/controllers'
-import type { ControllerType, ControllerConfig } from '@/lib/controllers'
+import { ControllerService, ControllerFactory, UnifiCloudAdapter, ControllerApiError } from '@/lib/controllers'
+import type { ControllerType, ControllerConfig, ControllerErrorCode } from '@/lib/controllers'
 import { getPortalSettings } from './portal-settings'
 import { decryptSecret } from '@/lib/secret-crypto'
 
@@ -98,9 +98,45 @@ function buildUnifiConfig(url: string, username: string, password: string, site:
 }
 
 function getSpecificErrorMessage(error: unknown, controllerType: string): string {
-  const message = error instanceof Error ? error.message : String(error)
-  // UniFi Cloud autentica por API Key (X-API-KEY), não por usuário/senha.
   const isCloud = controllerType.includes('Cloud')
+
+  // Caminho preferido: erro tipado com `code` normalizado na origem (adapter Cloud).
+  if (error instanceof ControllerApiError) {
+    const trace = error.traceId ? ` (traceId: ${error.traceId})` : ''
+    switch (error.code) {
+      case 'TIMEOUT':
+        return `Tempo de conexão esgotado. O ${controllerType} não respondeu em 10s — verifique se o console está online e conectado à internet.${trace}`
+      case 'NETWORK':
+        return `Não foi possível alcançar o ${controllerType}. Verifique a conexão de rede/DNS do servidor do portal.${trace}`
+      case 'UNAUTHORIZED':
+        return isCloud
+          ? `API Key inválida ou expirada. Gere uma nova em unifi.ui.com → Settings → API e cole no painel.${trace}`
+          : `Credenciais inválidas. Verifique usuário e senha do ${controllerType}.`
+      case 'NOT_OWNER':
+        return `Este console pertence a outra conta. A API Key precisa ser gerada pela conta PROPRIETÁRIA (owner) do console em unifi.ui.com → Settings → API — contas convidadas/admins não têm acesso ao Connector Proxy.${trace}`
+      case 'DEVICE_OFFLINE':
+        return `O console selecionado está offline (ou é um registro duplicado). Selecione o console online correto e confirme que o UDM/console está conectado à internet.${trace}`
+      case 'FORBIDDEN':
+        return isCloud
+          ? `Acesso negado. A API Key não tem permissão para este recurso. Verifique se ela foi gerada com acesso de administrador em unifi.ui.com → Settings → API.${trace}`
+          : `Acesso negado. O usuário não tem permissão suficiente no ${controllerType}. Use uma conta com perfil Admin.`
+      case 'NOT_FOUND':
+        return isCloud
+          ? `Recurso não encontrado no UniFi Cloud. Verifique se o console e o site selecionados ainda existem na sua conta.${trace}`
+          : `Endpoint não encontrado. A URL do ${controllerType} pode estar incorreta.`
+      case 'RATE_LIMITED':
+        return `Muitas requisições ao ${controllerType}. Aguarde alguns segundos e tente novamente.${trace}`
+      case 'SERVER_ERROR':
+        return `Serviço ${controllerType} indisponível (erro no servidor da Ubiquiti). Aguarde alguns minutos e tente novamente.${trace}`
+      case 'BAD_RESPONSE':
+        return `Resposta inesperada do ${controllerType}. Tente novamente; se persistir, contate o suporte.${trace}`
+      default:
+        return `Falha na comunicação com ${controllerType}: ${error.message}${trace}`
+    }
+  }
+
+  // Fallback: erros não-tipados (ex.: adapter UniFi local, que lança Error simples).
+  const message = error instanceof Error ? error.message : String(error)
 
   // Erros de rede / DNS
   if (message.includes('ENOTFOUND') || message.includes('getaddrinfo')) {
@@ -158,6 +194,26 @@ function getSpecificErrorMessage(error: unknown, controllerType: string): string
   }
 
   return `Falha na comunicação com ${controllerType}: ${message}`
+}
+
+/**
+ * Traduz um AuthorizeGuestResult falho em mensagem de UI, preservando o `errorCode`
+ * normalizado (em vez de re-embrulhar `result.error` num Error, o que perderia o code).
+ */
+function messageFromAuthResult(
+  result: { error?: string; errorCode?: string; traceId?: string },
+  controllerType: string
+): string {
+  if (result.errorCode) {
+    const synthetic = new ControllerApiError('unifi-cloud', result.error || 'Falha na autorização', {
+      code: result.errorCode as ControllerErrorCode,
+      endpoint: '',
+      api: 'integration-proxy',
+      traceId: result.traceId,
+    })
+    return getSpecificErrorMessage(synthetic, controllerType)
+  }
+  return getSpecificErrorMessage(new Error(result.error || 'Falha na autorização'), controllerType)
 }
 
 // --- Actions ---
@@ -523,7 +579,7 @@ export async function authorizeTestMacCloud(
     const adapter = ControllerFactory.create('unifi-cloud')
     const result = await adapter.authorizeGuest(config, { macAddress: normalizedMac, sessionMinutes })
     if (!result.success) {
-      return { success: false, message: getSpecificErrorMessage(new Error(result.error || 'Falha na autorização'), 'UniFi Cloud') }
+      return { success: false, message: messageFromAuthResult(result, 'UniFi Cloud') }
     }
     return { success: true, message: `MAC ${normalizedMac} autorizado por ${sessionMinutes} min via UniFi Cloud.` }
   } catch (error) {

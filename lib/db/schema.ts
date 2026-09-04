@@ -210,3 +210,28 @@ export const portalSettings = pgTable('portal_settings', {
   arubaClientSecret: text('arubaClientSecret'), // criptografado em repouso (ver lib/secret-crypto)
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
+
+// --- Logs de chamadas à UniFi Cloud API --------------------
+// Persistente (Postgres) para sobreviver a restart e ser compartilhado entre
+// réplicas — ao contrário de lib/portal-logs.ts (buffer em memória, por processo).
+// Uma linha por chamada ao Site Manager / Connector Proxy (sucesso ou falha).
+// NÃO contém credenciais/MAC/IP: a API key vive só no header e nunca é montada
+// no endpoint; bodySnippet é truncado (<=300) e gravado apenas em erro.
+export const cloudApiLogs = pgTable('cloud_api_logs', {
+  id: text('id').primaryKey(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  api: text('api').notNull(), // 'site-manager' | 'integration-proxy'
+  method: text('method').notNull(), // GET/POST/DELETE
+  endpoint: text('endpoint').notNull(), // só o path (ids de site/cliente não são segredo)
+  consoleId: text('consoleId'), // hostId do console (não é segredo)
+  siteId: text('siteId'),
+  status: integer('status'), // status HTTP; null em erro de rede/timeout
+  ok: boolean('ok').notNull().default(false),
+  errorCode: text('errorCode'), // ControllerErrorCode ou null em sucesso
+  latencyMs: integer('latencyMs').notNull().default(0),
+  traceId: text('traceId'), // traceId da Ubiquiti para escalar suporte
+  bodySnippet: text('bodySnippet'), // corpo truncado <=300 chars, só em erro
+}, (table) => [
+  index('cloud_api_logs_createdAt_idx').on(table.createdAt),
+  index('cloud_api_logs_errorCode_idx').on(table.errorCode),
+])

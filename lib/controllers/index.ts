@@ -56,3 +56,7 @@ export {
   ControllerAuthorizationError,
   ControllerNotConfiguredError,
 } from './types'
+
+// Erros tipados (código normalizado + traceId)
+export { ControllerApiError } from './errors'
+export type { ControllerErrorCode, ControllerApi } from './errors'

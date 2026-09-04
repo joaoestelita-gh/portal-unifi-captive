@@ -21,6 +21,19 @@ interface PortalLog {
   params: Record<string, string>
 }
 
+interface CloudApiLog {
+  id: string
+  createdAt: string
+  api: string
+  method: string
+  endpoint: string
+  status: number | null
+  ok: boolean
+  errorCode: string | null
+  latencyMs: number
+  traceId: string | null
+}
+
 interface ControllerSettings {
   controllerType?: string | null
   unifiControllerUrl?: string | null
@@ -305,6 +318,49 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
       return () => clearInterval(interval)
     }
   }, [controllerType, fetchPortalLogs])
+
+  // --- Logs da API UniFi Cloud (persistidos em Postgres) ---
+  const [cloudLogs, setCloudLogs] = useState<CloudApiLog[]>([])
+  const [loadingCloudLogs, setLoadingCloudLogs] = useState(false)
+  const [clearingCloudLogs, setClearingCloudLogs] = useState(false)
+
+  const fetchCloudLogs = useCallback(async (manual = false) => {
+    setLoadingCloudLogs(true)
+    try {
+      const res = await fetch('/api/debug/cloud-logs')
+      if (!res.ok) throw new Error('Falha ao carregar logs da API Cloud')
+      const data = await res.json()
+      setCloudLogs(data.logs || [])
+      if (manual) toast.success('Logs da API Cloud atualizados')
+    } catch (error) {
+      console.error('Error fetching cloud logs:', error)
+      if (manual) showError('Não foi possível atualizar os logs da API Cloud.')
+    }
+    setLoadingCloudLogs(false)
+  }, [])
+
+  const clearCloudLogs = async () => {
+    setClearingCloudLogs(true)
+    try {
+      const res = await fetch('/api/debug/cloud-logs', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Falha ao limpar logs da API Cloud')
+      setCloudLogs([])
+      toast.success('Logs da API Cloud limpos')
+    } catch (error) {
+      console.error('Error clearing cloud logs:', error)
+      showError('Não foi possível limpar os logs da API Cloud.')
+    }
+    setClearingCloudLogs(false)
+  }
+
+  // Auto-refresh a cada 5s apenas no modo UniFi Cloud
+  useEffect(() => {
+    if (controllerType === 'unifi-cloud') {
+      fetchCloudLogs()
+      const interval = setInterval(fetchCloudLogs, 5000)
+      return () => clearInterval(interval)
+    }
+  }, [controllerType, fetchCloudLogs])
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
@@ -593,6 +649,75 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
     </SectionCard>
   )
 
+  // Logs da API UniFi Cloud (persistidos em Postgres — sobrevivem a restart)
+  const cloudLogsCard = (
+    <SectionCard index={3} icon={Activity} title="Logs da API UniFi Cloud" accent="text-amber-400"
+      description="Cada chamada ao Site Manager / Connector Proxy (status, latência, código de erro e traceId da Ubiquiti). Persistido em banco — sobrevive a restart. Atualização automática a cada 5s.">
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fetchCloudLogs(true)}
+          disabled={loadingCloudLogs || clearingCloudLogs}
+          className="transition-all duration-200"
+        >
+          {loadingCloudLogs ? <Loader2 className="w-4 h-4 animate-spin sm:mr-2" /> : <RefreshCw className="w-4 h-4 sm:mr-2" />}
+          <span className="hidden sm:inline">{loadingCloudLogs ? 'Atualizando...' : 'Atualizar'}</span>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={clearCloudLogs}
+          disabled={clearingCloudLogs || cloudLogs.length === 0}
+          className="transition-all duration-200"
+        >
+          {clearingCloudLogs ? <Loader2 className="w-4 h-4 animate-spin sm:mr-2" /> : <Trash2 className="w-4 h-4 sm:mr-2" />}
+          <span className="hidden sm:inline">{clearingCloudLogs ? 'Limpando...' : 'Limpar'}</span>
+        </Button>
+      </div>
+      {cloudLogs.length === 0 ? (
+        <EmptyState
+          icon={Activity}
+          title="Nenhuma chamada registrada ainda"
+          description="Teste a conexão ou liste consoles/sites para que as chamadas à API apareçam aqui."
+        />
+      ) : (
+        <div className="space-y-2 max-h-72 overflow-y-auto">
+          {cloudLogs.map((log) => (
+            <div key={log.id} className="p-3 bg-background/50 rounded-lg border border-border/30 text-sm transition-all duration-200">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                  log.ok ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {log.ok ? (log.status ?? 'OK') : (log.errorCode || log.status || 'ERRO')}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(log.createdAt).toLocaleTimeString()} · {log.latencyMs}ms
+                </span>
+              </div>
+              <div className="text-xs font-mono text-foreground break-all">
+                <span className="text-muted-foreground">{log.method}</span>{' '}
+                {log.endpoint}
+                <span className="text-muted-foreground"> · {log.api}</span>
+              </div>
+              {log.traceId && (
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(log.traceId as string, `trace-${log.id}`)}
+                  className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  title="Copiar traceId (para suporte Ubiquiti)"
+                >
+                  {copied === `trace-${log.id}` ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                  <span className="font-mono">traceId: {log.traceId}</span>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </SectionCard>
+  )
+
   return (
     <div className="space-y-6">
       {/* URL do Portal */}
@@ -804,6 +929,7 @@ export function ControllerSetup({ portalUrl, settings }: ControllerSetupProps) {
             </div>
           </SectionCard>
 
+          {cloudLogsCard}
           {logsCard}
         </>
       ) : (

@@ -53,6 +53,10 @@ export interface AuthorizeGuestResult {
   redirectUrl?: string
   /** Mensagem de erro (se success=false) */
   error?: string
+  /** Código normalizado do erro (ver lib/controllers/errors.ts ControllerErrorCode) */
+  errorCode?: string
+  /** traceId da Ubiquiti, quando disponível (para escalar suporte) */
+  traceId?: string
 }
 
 export interface DeauthorizeGuestParams {
@@ -63,6 +67,8 @@ export interface DeauthorizeGuestParams {
 export interface DeauthorizeGuestResult {
   success: boolean
   error?: string
+  errorCode?: string
+  traceId?: string
 }
 
 // --- Client info ---

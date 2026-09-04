@@ -43,7 +43,29 @@ import {
   ControllerConnectionError,
   ControllerNotConfiguredError,
 } from '../types'
+import {
+  ControllerApiError,
+  mapHttpStatusToCode,
+  mapFetchNetworkErrorToCode,
+  extractTraceId,
+  truncateBody,
+  type ControllerErrorCode,
+  type ControllerApi,
+} from '../errors'
+import { recordCloudApiLog } from '../../cloud-api-logs'
+import { createLogger } from '../../logger'
 import type { CreateVoucherParams, UnifiVoucher } from './unifi.adapter'
+
+/** Timeout de cada chamada Cloud — evita pendurar em console offline/atrás de NAT. */
+const CLOUD_REQUEST_TIMEOUT_MS = 10_000
+
+const logger = createLogger('UniFi Cloud')
+
+/** Extrai o siteId do path (`/sites/{id}/...`) apenas para fins de log. */
+function siteIdFromEndpoint(endpoint: string): string | undefined {
+  const m = endpoint.match(/\/sites\/([^/]+)/)
+  return m?.[1]
+}
 
 // --- Envelopes da API ------------------------------------------------------
 
@@ -187,27 +209,81 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
     options?: RequestInit
   ): Promise<T> {
     const url = `${this.proxyBase(config)}${endpoint}`
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'X-API-KEY': this.getApiKey(config),
-        ...(options?.headers || {}),
-      },
-    })
+    const method = (options?.method || 'GET').toUpperCase()
+    const consoleId = config.options?.consoleId as string | undefined
+    const siteId = siteIdFromEndpoint(endpoint) ?? (config.credentials.site || undefined)
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new ControllerConnectionError(
-        'unifi-cloud',
-        `API request failed: ${response.status} ${endpoint}${body ? ` — ${body.slice(0, 200)}` : ''}`,
-        { status: response.status, endpoint, body: body.slice(0, 300) }
-      )
+    const start = Date.now()
+    let status: number | undefined
+    let ok = false
+    let code: ControllerErrorCode | undefined
+    let traceId: string | undefined
+    let bodySnippet: string | undefined
+
+    try {
+      let response: Response
+      try {
+        response = await fetch(url, {
+          ...options,
+          signal: AbortSignal.timeout(CLOUD_REQUEST_TIMEOUT_MS),
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-API-KEY': this.getApiKey(config),
+            ...(options?.headers || {}),
+          },
+        })
+      } catch (netErr) {
+        code = mapFetchNetworkErrorToCode(netErr)
+        throw new ControllerApiError('unifi-cloud', `Integration API ${code}: ${method} ${endpoint}`, {
+          code,
+          endpoint,
+          api: 'integration-proxy',
+        })
+      }
+
+      status = response.status
+      ok = response.ok
+      traceId = extractTraceId(undefined, response.headers)
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '')
+        bodySnippet = truncateBody(body)
+        code = mapHttpStatusToCode(response.status, body)
+        traceId = extractTraceId(body, response.headers) ?? traceId
+        throw new ControllerApiError(
+          'unifi-cloud',
+          `Integration API failed: ${response.status} ${endpoint}${body ? ` — ${body.slice(0, 200)}` : ''}`,
+          { status: response.status, code, endpoint, api: 'integration-proxy', traceId, body: bodySnippet }
+        )
+      }
+
+      const json = (await response.json()) as IntegrationEnvelope<T>
+      return json.data
+    } catch (err) {
+      if (err instanceof ControllerApiError) {
+        code = err.code
+        status = err.status ?? status
+        traceId = traceId ?? err.traceId
+      } else if (!code) {
+        code = 'UNKNOWN'
+      }
+      throw err
+    } finally {
+      recordCloudApiLog({
+        api: 'integration-proxy',
+        method,
+        endpoint,
+        consoleId,
+        siteId,
+        status,
+        ok,
+        errorCode: ok ? null : code ?? 'UNKNOWN',
+        latencyMs: Date.now() - start,
+        traceId,
+        bodySnippet,
+      })
     }
-
-    const json = (await response.json()) as IntegrationEnvelope<T>
-    return json.data
   }
 
   /** Requisição direta à Site Manager API (api.ui.com/v1), sem proxy. */
@@ -217,24 +293,75 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
     endpoint: string
   ): Promise<T> {
     const url = `${baseUrl.replace(/\/+$/, '')}/v1${endpoint}`
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'X-API-KEY': apiKey,
-      },
-    })
+    const api: ControllerApi = 'site-manager'
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new ControllerConnectionError(
-        'unifi-cloud',
-        `Site Manager request failed: ${response.status} ${endpoint}`,
-        { status: response.status, endpoint, body: body.slice(0, 300) }
-      )
+    const start = Date.now()
+    let status: number | undefined
+    let ok = false
+    let code: ControllerErrorCode | undefined
+    let traceId: string | undefined
+    let bodySnippet: string | undefined
+
+    try {
+      let response: Response
+      try {
+        response = await fetch(url, {
+          signal: AbortSignal.timeout(CLOUD_REQUEST_TIMEOUT_MS),
+          headers: {
+            Accept: 'application/json',
+            'X-API-KEY': apiKey,
+          },
+        })
+      } catch (netErr) {
+        code = mapFetchNetworkErrorToCode(netErr)
+        throw new ControllerApiError('unifi-cloud', `Site Manager ${code}: GET ${endpoint}`, {
+          code,
+          endpoint,
+          api,
+        })
+      }
+
+      status = response.status
+      ok = response.ok
+      traceId = extractTraceId(undefined, response.headers)
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '')
+        bodySnippet = truncateBody(body)
+        code = mapHttpStatusToCode(response.status, body)
+        traceId = extractTraceId(body, response.headers) ?? traceId
+        throw new ControllerApiError(
+          'unifi-cloud',
+          `Site Manager failed: ${response.status} ${endpoint}`,
+          { status: response.status, code, endpoint, api, traceId, body: bodySnippet }
+        )
+      }
+
+      const json = (await response.json()) as SiteManagerEnvelope<T>
+      traceId = json.traceId ?? traceId
+      return json.data
+    } catch (err) {
+      if (err instanceof ControllerApiError) {
+        code = err.code
+        status = err.status ?? status
+        traceId = traceId ?? err.traceId
+      } else if (!code) {
+        code = 'UNKNOWN'
+      }
+      throw err
+    } finally {
+      recordCloudApiLog({
+        api,
+        method: 'GET',
+        endpoint,
+        status,
+        ok,
+        errorCode: ok ? null : code ?? 'UNKNOWN',
+        latencyMs: Date.now() - start,
+        traceId,
+        bodySnippet,
+      })
     }
-
-    const json = (await response.json()) as SiteManagerEnvelope<T>
-    return json.data
   }
 
   // ==========================================================================
@@ -366,8 +493,16 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao autorizar'
-      console.error(`[UniFi Cloud] Authorization failed for ${params.macAddress}:`, error)
-      return { success: false, error: message }
+      logger.error(`autorização falhou para ${params.macAddress}`, {
+        code: error instanceof ControllerApiError ? error.code : undefined,
+        traceId: error instanceof ControllerApiError ? error.traceId : undefined,
+      })
+      return {
+        success: false,
+        error: message,
+        errorCode: error instanceof ControllerApiError ? error.code : undefined,
+        traceId: error instanceof ControllerApiError ? error.traceId : undefined,
+      }
     }
   }
 
@@ -393,6 +528,8 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erro ao desautorizar',
+        errorCode: error instanceof ControllerApiError ? error.code : undefined,
+        traceId: error instanceof ControllerApiError ? error.traceId : undefined,
       }
     }
   }
@@ -418,7 +555,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       const mapped = (clients || []).map((c) => this.mapClient(c))
       return guestsOnly ? mapped.filter((c) => c.isGuest) : mapped
     } catch (error) {
-      console.error('[UniFi Cloud] Error listing clients:', error)
+      logger.warn('erro ao listar clients', { err: String(error) })
       return []
     }
   }
@@ -433,7 +570,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
         description: s.desc,
       }))
     } catch (error) {
-      console.error('[UniFi Cloud] Error listing sites:', error)
+      logger.warn('erro ao listar sites', { err: String(error) })
       return []
     }
   }
@@ -458,7 +595,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
         state: (d.state || '').toUpperCase() === 'ONLINE' ? 'online' : 'offline',
       }))
     } catch (error) {
-      console.error('[UniFi Cloud] Error listing devices:', error)
+      logger.warn('erro ao listar devices', { err: String(error) })
       return []
     }
   }
@@ -493,7 +630,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       )
       return (created || []).map((v) => this.mapVoucher(v))
     } catch (error) {
-      console.error('[UniFi Cloud] Error creating vouchers:', error)
+      logger.error('erro ao criar vouchers', { err: String(error) })
       throw new ControllerConnectionError(
         'unifi-cloud',
         error instanceof Error ? error.message : 'Erro ao criar vouchers',
@@ -514,7 +651,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       )
       return (vouchers || []).map((v) => this.mapVoucher(v))
     } catch (error) {
-      console.error('[UniFi Cloud] Error listing vouchers:', error)
+      logger.warn('erro ao listar vouchers', { err: String(error) })
       return []
     }
   }
@@ -530,7 +667,7 @@ export class UnifiCloudAdapter implements WifiControllerAdapter {
       })
       return true
     } catch (error) {
-      console.error('[UniFi Cloud] Error deleting voucher:', error)
+      logger.warn('erro ao deletar voucher', { err: String(error) })
       return false
     }
   }
