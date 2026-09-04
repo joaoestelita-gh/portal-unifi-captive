@@ -29,6 +29,19 @@ export interface PortalSearchParams {
   force?: string
 }
 
+// Anti-replay: o `t` do UniFi é o unix-time (segundos) do redirect. Um `t` muito
+// antigo indica link reaproveitado/replay — nesse caso não fazemos auto-reconnect
+// (o usuário ainda pode logar pelo formulário). Ausente/ inválido = sem checagem
+// (Aruba/direct não enviam `t`); a janela é generosa p/ tolerar clock skew.
+const REDIRECT_MAX_AGE_SECONDS = 30 * 60
+function isRedirectFresh(t?: string): boolean {
+  if (!t) return true
+  const ts = Number(t)
+  if (!Number.isFinite(ts) || ts <= 0) return true
+  const nowSec = Math.floor(Date.now() / 1000)
+  return Math.abs(nowSec - ts) <= REDIRECT_MAX_AGE_SECONDS
+}
+
 // A `url` original vem do redirect e é controlada pelo cliente. Só aceitamos
 // http(s) absoluto — evita open-redirect via javascript:/data: e valores quebrados.
 function sanitizeRedirectUrl(raw?: string): string | undefined {
@@ -101,8 +114,14 @@ export async function PortalEntry({ params }: { params: PortalSearchParams }) {
   }
 
   // Auto-reconnect: if this MAC already has an active session, skip the form.
-  // Skip when force=1 is present (useful for testing the form directly).
-  if (macAddress && params.force !== '1') {
+  // Skip when force=1 is present (useful for testing the form directly) or when
+  // the redirect timestamp is stale (anti-replay — a link reaproveitado não deve
+  // reautorizar sozinho; o usuário ainda pode logar pelo formulário).
+  const redirectFresh = isRedirectFresh(params.t)
+  if (!redirectFresh) {
+    console.warn('[Portal] Redirect timestamp stale — skipping auto-reconnect:', params.t)
+  }
+  if (macAddress && params.force !== '1' && redirectFresh) {
     const sessionCheck = await checkActiveSession(
       macAddress,
       controller !== 'direct' ? controller : null,

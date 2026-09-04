@@ -150,3 +150,11 @@ GET /guest/s/default/?ap=94:2A:6F:D0:30:57&id=1C:71:25:63:E4:24&t=1742398732&url
 - A autorização é feita pela **API do controlador UniFi** (local ou Cloud), não por RADIUS.
 - As rotas `/`, `/portal` e `/guest/s/<site>/` são equivalentes no sistema.
 - Use sempre HTTPS no portal e mantenha o domínio idêntico na URL e no Walled Garden.
+- **MAC randomizado (iOS 14+/Android 10+):** o dispositivo usa um MAC aleatório
+  **por SSID**, então a liberação (`authorize-guest`) funciona normalmente. Porém as
+  features de **dispositivo confiável** e **MAC pré-autorizado** ficam menos confiáveis
+  entre redes/resets. Se isso for crítico, oriente o usuário a desativar "Endereço
+  privado"/"Private Address" no SSID de convidados.
+- **UniFi OS (UDM/Cloud Key Gen2+):** o adapter local já trata o **token CSRF**
+  (exigido em requisições de autorização) e aceita **certificado self-signed** do
+  controlador acessado por IP — nenhuma configuração adicional é necessária.

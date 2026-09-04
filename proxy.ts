@@ -27,6 +27,38 @@ function isPublicRoute(pathname: string): boolean {
   )
 }
 
+// --- Rate limit best-effort das rotas públicas do portal ---
+// Contém rajadas de abuso em `/`, `/portal` e `/guest` (que fazem queries no
+// banco e podem falar com a controladora). É POR INSTÂNCIA (em memória): em
+// produção com múltiplas instâncias, um store durável (ex.: Upstash) é o ideal.
+const RL_WINDOW_MS = 10_000
+const RL_MAX = 40
+const rlBucket = new Map<string, { count: number; resetAt: number }>()
+
+function isPortalEntryRoute(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname === '/portal' ||
+    pathname === '/guest' ||
+    pathname.startsWith('/portal/') ||
+    pathname.startsWith('/guest/')
+  )
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  if (rlBucket.size > 5000) {
+    for (const [k, v] of rlBucket) if (v.resetAt < now) rlBucket.delete(k)
+  }
+  const entry = rlBucket.get(ip)
+  if (!entry || entry.resetAt < now) {
+    rlBucket.set(ip, { count: 1, resetAt: now + RL_WINDOW_MS })
+    return false
+  }
+  entry.count++
+  return entry.count > RL_MAX
+}
+
 function isCronRoute(pathname: string): boolean {
   return CRON_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/')
@@ -49,6 +81,20 @@ export function proxy(request: NextRequest) {
     pathname.includes('.') // arquivos estáticos (css, js, imagens, etc.)
   ) {
     return NextResponse.next()
+  }
+
+  // Rate limit best-effort das rotas do portal (públicas, mas custosas)
+  if (isPortalEntryRoute(pathname)) {
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown'
+    if (isRateLimited(ip)) {
+      return new NextResponse('Too Many Requests', {
+        status: 429,
+        headers: { 'Retry-After': '10' },
+      })
+    }
   }
 
   // Rotas públicas — acesso livre

@@ -34,11 +34,43 @@ import {
   ControllerAuthorizationError,
   ControllerNotConfiguredError,
 } from '../types'
+import { Agent } from 'undici'
+
+/**
+ * Dispatcher que aceita certificados self-signed do controlador local
+ * (UDM/Cloud Key acessado por IP). O `fetch` do Node (undici) IGNORA a opção
+ * `rejectUnauthorized` passada solta — o bypass só funciona via dispatcher.
+ */
+const insecureDispatcher = new Agent({ connect: { rejectUnauthorized: false } })
+
+// O RequestInit global (DOM lib) não conhece `dispatcher`; undici lê em runtime.
+type FetchInitWithDispatcher = RequestInit & { dispatcher?: Agent }
+
+/**
+ * Extrai o csrfToken do cookie TOKEN do UniFi OS (um JWT).
+ * Retorna undefined em controllers antigos que não usam TOKEN JWT.
+ */
+function extractCsrfFromCookie(cookie: string): string | undefined {
+  const eq = cookie.indexOf('=')
+  if (eq === -1) return undefined
+  const jwt = cookie.slice(eq + 1)
+  const parts = jwt.split('.')
+  if (parts.length < 2) return undefined
+  try {
+    const payload = JSON.parse(
+      Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
+    ) as { csrfToken?: unknown }
+    return typeof payload.csrfToken === 'string' ? payload.csrfToken : undefined
+  } catch {
+    return undefined
+  }
+}
 
 // --- UniFi-specific types (internal, never exported) ---
 
 interface UnifiAuthSession {
   cookie: string
+  csrfToken?: string
   expiresAt: number // timestamp
 }
 
@@ -165,7 +197,7 @@ export class UnifiAdapter implements WifiControllerAdapter {
    * - Se config.credentials.apiKey existir, usar header X-API-KEY
    * - Caso contrário, usar login cookie-based (padrão)
    */
-  private async authenticate(config: ControllerConfig): Promise<string> {
+  private async authenticate(config: ControllerConfig): Promise<UnifiAuthSession> {
     // Futuro: Token-based auth
     if (config.credentials.apiKey) {
       // Quando UniFi suportar API keys nativamente:
@@ -176,22 +208,22 @@ export class UnifiAdapter implements WifiControllerAdapter {
     // Verificar cache de sessão
     const cached = UnifiAdapter.sessionCache.get(config.baseUrl)
     if (cached && cached.expiresAt > Date.now()) {
-      return cached.cookie
+      return cached
     }
 
     // Login cookie-based
     const loginUrl = `${config.baseUrl}/api/auth/login`
 
-    const response = await fetch(loginUrl, {
+    const loginOptions: FetchInitWithDispatcher = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: config.credentials.username,
         password: config.credentials.password,
       }),
-      // @ts-expect-error - Node.js specific: aceitar self-signed certs
-      rejectUnauthorized: false,
-    })
+      dispatcher: insecureDispatcher,
+    }
+    const response = await fetch(loginUrl, loginOptions)
 
     if (!response.ok) {
       throw new ControllerConnectionError(
@@ -211,13 +243,22 @@ export class UnifiAdapter implements WifiControllerAdapter {
 
     const cookie = setCookie.split(';')[0]
 
-    // Cache por 25 minutos (sessão UniFi dura ~30min)
-    UnifiAdapter.sessionCache.set(config.baseUrl, {
-      cookie,
-      expiresAt: Date.now() + 25 * 60 * 1000,
-    })
+    // UniFi OS exige X-CSRF-Token em requisições mutáveis (POST/PUT/DELETE).
+    // O token vem no header da resposta OU embutido no cookie TOKEN (JWT).
+    const csrfToken =
+      response.headers.get('x-csrf-token') ||
+      response.headers.get('x-updated-csrf-token') ||
+      extractCsrfFromCookie(cookie)
 
-    return cookie
+    const session: UnifiAuthSession = {
+      cookie,
+      csrfToken: csrfToken || undefined,
+      // Cache por 25 minutos (sessão UniFi dura ~30min)
+      expiresAt: Date.now() + 25 * 60 * 1000,
+    }
+    UnifiAdapter.sessionCache.set(config.baseUrl, session)
+
+    return session
   }
 
   /**
@@ -232,27 +273,28 @@ export class UnifiAdapter implements WifiControllerAdapter {
     const site = config.credentials.site || 'default'
     const url = `${config.baseUrl}/proxy/network/api/s/${site}${endpoint}`
 
-    const makeRequest = async (cookie: string): Promise<Response> => {
-      return fetch(url, {
+    const makeRequest = async (session: UnifiAuthSession): Promise<Response> => {
+      const fetchOptions: FetchInitWithDispatcher = {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          Cookie: cookie,
+          Cookie: session.cookie,
+          ...(session.csrfToken ? { 'X-CSRF-Token': session.csrfToken } : {}),
           ...(options?.headers || {}),
         },
-        // @ts-expect-error - Node.js specific
-        rejectUnauthorized: false,
-      })
+        dispatcher: insecureDispatcher,
+      }
+      return fetch(url, fetchOptions)
     }
 
-    let cookie = await this.authenticate(config)
-    let response = await makeRequest(cookie)
+    let session = await this.authenticate(config)
+    let response = await makeRequest(session)
 
     // Retry on 401 (session expired)
     if (response.status === 401) {
       UnifiAdapter.sessionCache.delete(config.baseUrl)
-      cookie = await this.authenticate(config)
-      response = await makeRequest(cookie)
+      session = await this.authenticate(config)
+      response = await makeRequest(session)
     }
 
     if (!response.ok) {
@@ -277,18 +319,19 @@ export class UnifiAdapter implements WifiControllerAdapter {
   ): Promise<T> {
     const url = `${config.baseUrl}${endpoint}`
 
-    const cookie = await this.authenticate(config)
+    const session = await this.authenticate(config)
 
-    const response = await fetch(url, {
+    const fetchOptions: FetchInitWithDispatcher = {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        Cookie: cookie,
+        Cookie: session.cookie,
+        ...(session.csrfToken ? { 'X-CSRF-Token': session.csrfToken } : {}),
         ...(options?.headers || {}),
       },
-      // @ts-expect-error - Node.js specific
-      rejectUnauthorized: false,
-    })
+      dispatcher: insecureDispatcher,
+    }
+    const response = await fetch(url, fetchOptions)
 
     if (!response.ok) {
       throw new ControllerConnectionError(
